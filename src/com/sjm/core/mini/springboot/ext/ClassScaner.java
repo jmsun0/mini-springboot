@@ -20,8 +20,7 @@ import com.sjm.core.util.Platform;
 
 public class ClassScaner {
     public static void main(String[] args) {
-        ClassScaner.scan(new String[] {"com.sjm.common.json"}, true,
-                clazz -> System.out.println(clazz));
+        ClassScaner.scan(new String[] {"com.sjm"}, true, clazz -> System.out.println(clazz));
     }
 
     static final Logger logger = LoggerFactory.getLogger(ClassScaner.class);
