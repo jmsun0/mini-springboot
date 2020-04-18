@@ -8,7 +8,6 @@ import java.nio.file.StandardOpenOption;
 
 import com.sjm.core.nio.core.ChannelContext;
 import com.sjm.core.nio.core.ChannelEncoder;
-import com.sjm.core.nio.core.NIOTools;
 import com.sjm.core.util.Misc;
 
 /**
