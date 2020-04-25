@@ -9,6 +9,7 @@ public class AnnotationBeanDefinition {
 
     public AnnotationBeanDefinition(String name, Class<? extends FactoryBean<?>> factoryClass,
             Object... constructorArgs) {
+        this.name = name;
         this.factoryClass = factoryClass;
         this.constructorArgs = constructorArgs;
     }

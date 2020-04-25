@@ -1,6 +1,7 @@
 package com.sjm.core.mini.springboot.api;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -53,6 +54,10 @@ public class SpringApplication {
     private List<BeanDefinition> beanList = new ArrayList<>();
     private Map<Class<?>, List<Class<?>>> annotationClassesMap = new HashMap<>();
     private Map<Class<?>, ReflectionCacheData> reflectionCacheDataMap = new HashMap<>();
+    private List<BeanDefinition> lazyAutowiredBeanList = new ArrayList<>();
+    private List<BeanDefinition> lazyResourceBeanList = new ArrayList<>();
+    private List<CommandLineRunner> runners = new ArrayList<>();
+    private Map<Class<? extends Condition>, Condition> conditionMap = new HashMap<>();
 
     public SpringApplication(Class<?> clazz) {
         this.clazz = clazz;
@@ -75,15 +80,19 @@ public class SpringApplication {
         }
 
         for (Class<?> componentClass : componentClassList) {
-            registerComponentBean(componentClass);
-            if (AnnotationBeanRegister.class.isAssignableFrom(componentClass)) {
-                registerAnnotationBean(componentClass);
-            }
-            ReflectionCacheData data = getReflectionCacheData(componentClass);
-            for (int i = 0; i < data.beanMethods.size(); i++) {
-                Method method = data.beanMethods.get(i);
-                Bean ann = data.beanAnnotations.get(i);
-                registerMethodBean(componentClass, method, ann);
+            if (checkConditional(componentClass, componentClass)) {
+                registerComponentBean(componentClass);
+                if (AnnotationBeanRegister.class.isAssignableFrom(componentClass)) {
+                    registerAnnotationBean(componentClass);
+                }
+                ReflectionCacheData data = getReflectionCacheData(componentClass);
+                for (int i = 0; i < data.beanMethods.size(); i++) {
+                    Method method = data.beanMethods.get(i);
+                    Bean ann = data.beanAnnotations.get(i);
+                    if (checkConditional(method, method.getReturnType())) {
+                        registerMethodBean(componentClass, method, ann);
+                    }
+                }
             }
         }
 
@@ -98,35 +107,57 @@ public class SpringApplication {
             initBean(def);
         }
 
-        for (BeanDefinition def : beanList) {
+        for (BeanDefinition def : lazyAutowiredBeanList) {
             ReflectionCacheData data = getReflectionCacheData(def.type);
-            if (!data.lazyAutowiredFields.isEmpty()) {
-                for (int i = 0; i < data.lazyAutowiredFields.size(); i++) {
-                    Field field = data.lazyAutowiredFields.get(i);
-                    field.set(def.bean, getBean(field.getType()));
-                }
+            for (int i = 0; i < data.lazyAutowiredFields.size(); i++) {
+                Field field = data.lazyAutowiredFields.get(i);
+                field.set(def.bean, getBean(field.getType()));
             }
+        }
 
-            if (!data.lazyResourceFields.isEmpty()) {
-                for (int i = 0; i < data.lazyResourceFields.size(); i++) {
-                    Field field = data.lazyResourceFields.get(i);
-                    Resource res = data.lazyResourceAnnotations.get(i);
-                    field.set(def.bean, getBean(res.name()));
-                }
+        for (BeanDefinition def : lazyResourceBeanList) {
+            ReflectionCacheData data = getReflectionCacheData(def.type);
+            for (int i = 0; i < data.lazyResourceFields.size(); i++) {
+                Field field = data.lazyResourceFields.get(i);
+                Resource res = data.lazyResourceAnnotations.get(i);
+                field.set(def.bean, getBean(res.name()));
             }
         }
 
         logger.info("{} started OK", clazz.getSimpleName());
 
-        for (BeanDefinition def : beanList) {
-            if (def.bean instanceof CommandLineRunner) {
-                ((CommandLineRunner) def.bean).run(args);
-            }
-        }
-
         beanList = null;
         annotationClassesMap = null;
         reflectionCacheDataMap = null;
+        lazyAutowiredBeanList = null;
+        lazyResourceBeanList = null;
+        conditionMap = null;
+
+        for (CommandLineRunner runner : runners) {
+            runner.run(args);
+        }
+    }
+
+    private boolean checkConditional(AnnotatedElement element, Class<?> beanType) {
+        Conditional conditional = element.getDeclaredAnnotation(Conditional.class);
+        if (conditional == null)
+            return true;
+        Class<? extends Condition>[] conditionClasses = conditional.value();
+        for (Class<? extends Condition> conditionClass : conditionClasses) {
+            Condition condition = conditionMap.get(conditionClass);
+            if (condition == null) {
+                try {
+                    conditionMap.put(conditionClass, condition = conditionClass.newInstance());
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                    throw new SpringException(
+                            "Condition [" + conditionClass.getName() + "] instance fail");
+                }
+            }
+            if (!condition.matches(beanType))
+                return false;
+        }
+        return true;
     }
 
     private void assignDependsOn() {
@@ -219,33 +250,35 @@ public class SpringApplication {
         AnnotationBeanRegister<Annotation> register =
                 (AnnotationBeanRegister<Annotation>) componentClass.newInstance();
         for (Class<?> beanClass : beanClasses) {
-            Annotation ann = beanClass.getAnnotation(annType);
-            AnnotationBeanDefinition annDef = register.register(ann, beanClass);
+            if (checkConditional(beanClass, beanClass)) {
+                Annotation ann = beanClass.getAnnotation(annType);
+                AnnotationBeanDefinition annDef = register.register(ann, beanClass);
 
-            BeanDefinition factoryFactoryDef = new BeanDefinition();
-            factoryFactoryDef.bean = new AnnotationFactoryBean(componentClass, annDef);
-            factoryFactoryDef.type = AnnotationFactoryBean.class;
-            putBeanDefinition(factoryFactoryDef);
+                BeanDefinition factoryFactoryDef = new BeanDefinition();
+                factoryFactoryDef.bean = new AnnotationFactoryBean(componentClass, annDef);
+                factoryFactoryDef.type = AnnotationFactoryBean.class;
+                putBeanDefinition(factoryFactoryDef);
 
-            String factoryFactoryDefName = UUID.randomUUID().toString();
-            putBeanDefinition(factoryFactoryDefName, factoryFactoryDef);
+                String factoryFactoryDefName = UUID.randomUUID().toString();
+                putBeanDefinition(factoryFactoryDefName, factoryFactoryDef);
 
-            BeanDefinition factoryDef = new BeanDefinition();
-            factoryDef.factoryName = factoryFactoryDefName;
-            factoryDef.dependsOn = Lists.emptyObjectArray;
-            factoryDef.type = annDef.factoryClass;
-            putBeanDefinition(factoryDef);
+                BeanDefinition factoryDef = new BeanDefinition();
+                factoryDef.factoryName = factoryFactoryDefName;
+                factoryDef.dependsOn = Lists.emptyObjectArray;
+                factoryDef.type = annDef.factoryClass;
+                putBeanDefinition(factoryDef);
 
-            String factoryDefName = UUID.randomUUID().toString();
-            putBeanDefinition(factoryDefName, factoryDef);
+                String factoryDefName = UUID.randomUUID().toString();
+                putBeanDefinition(factoryDefName, factoryDef);
 
-            BeanDefinition def = new BeanDefinition();
-            def.factoryName = factoryDefName;
-            def.type = beanClass;
-            putBeanDefinition(def);
+                BeanDefinition def = new BeanDefinition();
+                def.factoryName = factoryDefName;
+                def.type = beanClass;
+                putBeanDefinition(def);
 
-            if (Misc.isNotEmpty(annDef.name)) {
-                putBeanDefinition(annDef.name, def);
+                if (Misc.isNotEmpty(annDef.name)) {
+                    putBeanDefinition(annDef.name, def);
+                }
             }
         }
     }
@@ -263,9 +296,13 @@ public class SpringApplication {
         def.type = method.getReturnType();
         putBeanDefinition(def);
 
-        String name = ann.value();
-        if (Misc.isNotEmpty(name)) {
-            putBeanDefinition(name, def);
+        String[] names = ann.value();
+        if (names != null && names.length != 0) {
+            for (String name : names) {
+                if (Misc.isNotEmpty(name)) {
+                    putBeanDefinition(name, def);
+                }
+            }
         }
     }
 
@@ -293,7 +330,7 @@ public class SpringApplication {
                 FactoryBean<?> factory = (FactoryBean<?>) factoryDef.bean;
                 def.bean = factory.getObject();
 
-                beanPostProcess(def.bean);
+                beanPostProcess(def);
             }
         } catch (Exception e) {
             logger.error("Bean [{}] init fail", def.type);
@@ -301,7 +338,8 @@ public class SpringApplication {
         }
     }
 
-    private void beanPostProcess(Object bean) throws Exception {
+    private void beanPostProcess(BeanDefinition def) throws Exception {
+        Object bean = def.bean;
         ReflectionCacheData data = getReflectionCacheData(bean.getClass());
 
         if (!data.autowiredFields.isEmpty()) {
@@ -343,6 +381,18 @@ public class SpringApplication {
             for (Method method : data.postConstructMethods) {
                 method.invoke(bean);
             }
+        }
+
+        if (!data.lazyAutowiredFields.isEmpty()) {
+            lazyAutowiredBeanList.add(def);
+        }
+
+        if (!data.lazyResourceFields.isEmpty()) {
+            lazyResourceBeanList.add(def);
+        }
+
+        if (bean instanceof CommandLineRunner) {
+            runners.add((CommandLineRunner) bean);
         }
     }
 
