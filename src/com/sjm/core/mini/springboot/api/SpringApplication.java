@@ -329,6 +329,8 @@ public class SpringApplication {
                 initBean(factoryDef);
                 FactoryBean<?> factory = (FactoryBean<?>) factoryDef.bean;
                 def.bean = factory.getObject();
+                if (def.bean == null)
+                    throw new SpringException("The factory of bean[" + def.type + "] return null");
 
                 beanPostProcess(def);
             }
