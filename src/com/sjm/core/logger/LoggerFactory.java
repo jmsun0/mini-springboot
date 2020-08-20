@@ -23,18 +23,18 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.sjm.core.util.Analyzer;
-import com.sjm.core.util.CharFilter;
-import com.sjm.core.util.DateFormats;
-import com.sjm.core.util.IOUtil;
-import com.sjm.core.util.Lists;
-import com.sjm.core.util.Maps;
-import com.sjm.core.util.Misc;
-import com.sjm.core.util.MyStringBuilder;
-import com.sjm.core.util.Numbers;
-import com.sjm.core.util.Size;
-import com.sjm.core.util.Source;
-import com.sjm.core.util.Strings;
+import com.sjm.core.util.core.DateFormats;
+import com.sjm.core.util.core.IOUtil;
+import com.sjm.core.util.core.Lists;
+import com.sjm.core.util.core.Maps;
+import com.sjm.core.util.core.MyStringBuilder;
+import com.sjm.core.util.core.Numbers;
+import com.sjm.core.util.core.Size;
+import com.sjm.core.util.core.Strings;
+import com.sjm.core.util.misc.Analyzer;
+import com.sjm.core.util.misc.CharFilter;
+import com.sjm.core.util.misc.Misc;
+import com.sjm.core.util.misc.Source;
 
 public class LoggerFactory {
     static {
@@ -473,7 +473,7 @@ public class LoggerFactory {
             currentLogFormat.set(logFormat);
             try {
                 List<LogPattern> patternList = INSTANCE.parseList(str);
-                logFormat.patterns = Lists.toTArray(patternList, LogPattern.class);
+                logFormat.patterns = (LogPattern[]) Lists.toArray(patternList, LogPattern.class);
                 return logFormat;
             } finally {
                 currentLogFormat.remove();
@@ -533,8 +533,8 @@ public class LoggerFactory {
         private static FileNameFormatParser INSTANCE = new FileNameFormatParser();
 
         public static FileNameFormat parse(String str) {
-            return FileNameFormats
-                    .link(Lists.toTArray(INSTANCE.parseList(str), FileNameFormat.class));
+            return FileNameFormats.link((FileNameFormat[]) Lists.toArray(INSTANCE.parseList(str),
+                    FileNameFormat.class));
         }
 
         @Override
@@ -675,14 +675,14 @@ public class LoggerFactory {
             }
             int min = -1, max = -1;
             if (key == ItemKey.INTEGER) {
-                min = Numbers.parseIntWithoutSign(src.getValue(), null, 10, -1, -1);
+                min = Numbers.parseUnsignInt(src.getValue(), 10, -1, -1);
                 key = src.next();
             }
             if (key == ItemKey.DOT) {
                 key = src.next();
             }
             if (key == ItemKey.INTEGER) {
-                max = Numbers.parseIntWithoutSign(src.getValue(), null, 10, -1, -1);
+                max = Numbers.parseUnsignInt(src.getValue(), 10, -1, -1);
                 key = src.next();
             }
             String name;
@@ -697,7 +697,7 @@ public class LoggerFactory {
                 params.add(value.subSequence(1, value.length() - 1).toString());
                 key = src.next();
             }
-            return item(name, left, min, max, Lists.toTArray(params, String.class));
+            return item(name, left, min, max, (String[]) Lists.toArray(params, String.class));
         }
     }
 
@@ -787,11 +787,10 @@ public class LoggerFactory {
                 @Override
                 public int match(String str, int from, FileNameFormatContext fctx) {
                     try {
-                        int index = Strings.indexOf(str, null,
-                                CharFilter.not(CharFilter.DecimalNumber), from, -1);
+                        int index = Strings.indexOf(str, c -> !(c >= '0' && c <= '9'), from, -1);
                         if (index == -1)
                             index = str.length();
-                        fctx.index = Numbers.parseIntWithoutSign(str, null, 10, from, index);
+                        fctx.index = Numbers.parseUnsignInt(str, 10, from, index);
                         return index;
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -853,7 +852,7 @@ public class LoggerFactory {
         private static void loadLogAppenders() {
             String appenderNames = Misc.getProperty("logger.appenders", "", String.class);
             if (!appenderNames.isEmpty()) {
-                List<String> appenderNameList = Strings.split(appenderNames, ",", String.class);
+                List<String> appenderNameList = Strings.splitMapper(appenderNames, ",", s -> s);
                 MyStringBuilder sb = new MyStringBuilder();
                 for (String appenderName : appenderNameList) {
                     sb.clear();
@@ -900,7 +899,7 @@ public class LoggerFactory {
                         if (appender != null)
                             defaultAppenders.add(appender);
                     } else {
-                        List<String> loggerList = Strings.split(loggers, ",", String.class);
+                        List<String> loggerList = Strings.splitMapper(loggers, ",", s -> s);
                         for (String logger : loggerList) {
                             List<LogAppender> appenderList = appendersMap.get(logger);
                             if (appenderList == null)
@@ -1093,7 +1092,7 @@ public class LoggerFactory {
                 }
             }
             if (files.size() > maxHistoryCount) {
-                Lists.quickSort(files, null, null, -1, -1);
+                Lists.quickSort(files, null, -1, -1);
                 int index = files.size() - 1;
                 long size = 0;
                 for (int toIndex = index - maxHistoryCount + 1; index >= toIndex; index--) {
@@ -1117,7 +1116,7 @@ public class LoggerFactory {
                     levelSet[i] = true;
                 }
             } else {
-                List<Integer> levelList = Strings.split(levels, ",", Util::getLevel);
+                List<Integer> levelList = Strings.splitMapper(levels, ",", Util::getLevel);
                 for (int level : levelList) {
                     levelSet[level] = true;
                 }

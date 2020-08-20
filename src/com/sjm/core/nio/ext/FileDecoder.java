@@ -9,7 +9,7 @@ import java.nio.file.StandardOpenOption;
 
 import com.sjm.core.nio.core.ChannelContext;
 import com.sjm.core.nio.core.ChannelDecoder;
-import com.sjm.core.util.Misc;
+import com.sjm.core.util.misc.Misc;
 
 /**
  * 报文类型： File（实现零拷贝）
@@ -41,15 +41,16 @@ public class FileDecoder extends ChannelDecoder {
     }
 
     @Override
-    protected void decode(ChannelContext ctx) throws IOException {
+    protected boolean decode(ChannelContext ctx) throws IOException {
         DecodeContext dc = getDecodeContext(ctx);
+        int n = -1;
         switch (dc.state) {
             case STATE_HEADER: {
-                int len = Math.min(ctx.readBuffer.remaining(), dc.header.length - dc.headerIndex);
-                ctx.readBuffer.get(dc.header, dc.headerIndex, len);
-                dc.headerIndex += len;
+                n = Math.min(ctx.readBuffer.remaining(), dc.header.length - dc.headerIndex);
+                ctx.readBuffer.get(dc.header, dc.headerIndex, n);
+                dc.headerIndex += n;
                 if (dc.headerIndex == dc.header.length) {
-                    dc.total = NIOTools.getLong(dc.header);
+                    dc.total = NIOTools.getLong(dc.header, 0);
                     dc.file = Files.createTempFile(null, null).toFile();
                     dc.fc = FileChannel.open(dc.file.toPath(), StandardOpenOption.WRITE);
                     dc.state = STATE_BODY;
@@ -57,13 +58,13 @@ public class FileDecoder extends ChannelDecoder {
                 break;
             }
             case STATE_BODY: {
+                n = (int) Math.min(ctx.readBuffer.remaining(), dc.total);
                 int oldLimit = ctx.readBuffer.limit();
-                int len = (int) Math.min(ctx.readBuffer.remaining(), dc.total);
-                ctx.readBuffer.limit(ctx.readBuffer.position() + len);
-                int n = dc.fc.write(ctx.readBuffer);
-                if (n != len)
+                ctx.readBuffer.limit(ctx.readBuffer.position() + n);
+                int len = dc.fc.write(ctx.readBuffer);
+                if (len != n)
                     throw new IOException();
-                dc.position += len;
+                dc.position += n;
                 ctx.readBuffer.limit(oldLimit);
                 if (dc.position == dc.total) {
                     finish(ctx, dc);
@@ -71,6 +72,7 @@ public class FileDecoder extends ChannelDecoder {
                 break;
             }
         }
+        return n != 0;
     }
 
     @Override

@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public abstract class ChannelDecoder implements ChannelHandler {
 
-    protected abstract void decode(ChannelContext ctx) throws IOException;
+    protected abstract boolean decode(ChannelContext ctx) throws IOException;
 
     @Override
     public int handle(ChannelContext ctx) throws IOException {
@@ -18,12 +18,7 @@ public abstract class ChannelDecoder implements ChannelHandler {
                 return n;
             }
             ctx.readBuffer.flip();
-            while (true) {
-                decode(ctx);
-                if (!ctx.readBuffer.hasRemaining()) {
-                    break;
-                }
-            }
+            while (decode(ctx));
             ctx.readBuffer.clear();
         }
     }

@@ -5,7 +5,7 @@ import java.nio.channels.SelectionKey;
 
 public abstract class ChannelEncoder implements ChannelHandler {
 
-    protected abstract void encode(ChannelContext ctx) throws IOException;
+    protected abstract boolean encode(ChannelContext ctx) throws IOException;
 
     @Override
     public int handle(ChannelContext ctx) throws IOException {
@@ -25,12 +25,7 @@ public abstract class ChannelEncoder implements ChannelHandler {
                     return 0;
                 }
                 ctx.writeBuffer.clear();
-                while (true) {
-                    encode(ctx);
-                    if (!ctx.writeBuffer.hasRemaining() || ctx.writeQueue.isEmpty()) {
-                        break;
-                    }
-                }
+                while (encode(ctx));
                 ctx.writeBuffer.flip();
             }
         }

@@ -27,25 +27,26 @@ public class ByteArrayDecoder extends ChannelDecoder {
     }
 
     @Override
-    protected void decode(ChannelContext ctx) throws IOException {
+    protected boolean decode(ChannelContext ctx) throws IOException {
         DecodeContext dc = (DecodeContext) ctx.decodeCotext;
         if (dc == null)
             ctx.decodeCotext = dc = new DecodeContext();
+        int n = -1;
         switch (dc.state) {
             case STATE_HEADER: {
-                int len = Math.min(ctx.readBuffer.remaining(), dc.header.length - dc.headerIndex);
-                ctx.readBuffer.get(dc.header, dc.headerIndex, len);
-                dc.headerIndex += len;
+                n = Math.min(ctx.readBuffer.remaining(), dc.header.length - dc.headerIndex);
+                ctx.readBuffer.get(dc.header, dc.headerIndex, n);
+                dc.headerIndex += n;
                 if (dc.headerIndex == dc.header.length) {
-                    dc.data = new byte[NIOTools.getInt(dc.header)];
+                    dc.data = new byte[NIOTools.getInt(dc.header, 0)];
                     dc.state = STATE_BODY;
                 }
                 break;
             }
             case STATE_BODY: {
-                int len = Math.min(ctx.readBuffer.remaining(), dc.data.length - dc.dataIndex);
-                ctx.readBuffer.get(dc.data, dc.dataIndex, len);
-                dc.dataIndex += len;
+                n = Math.min(ctx.readBuffer.remaining(), dc.data.length - dc.dataIndex);
+                ctx.readBuffer.get(dc.data, dc.dataIndex, n);
+                dc.dataIndex += n;
                 if (dc.dataIndex == dc.data.length) {
                     ctx.processer.process(ctx, dc.data);
                     dc.headerIndex = 0;
@@ -56,5 +57,6 @@ public class ByteArrayDecoder extends ChannelDecoder {
                 break;
             }
         }
+        return n != 0;
     }
 }

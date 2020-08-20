@@ -28,28 +28,31 @@ public class ByteArrayEncoder extends ChannelEncoder {
     }
 
     @Override
-    protected void encode(ChannelContext ctx) throws IOException {
+    protected boolean encode(ChannelContext ctx) throws IOException {
         EncodeContext ec = (EncodeContext) ctx.encodeCotext;
         if (ec == null)
             ctx.encodeCotext = ec = new EncodeContext();
+        int n = -1;
         switch (ec.state) {
             case STATE_HEADER: {
                 if (ec.headerIndex == 0) {
+                    if (ctx.writeQueue.isEmpty())
+                        return false;
                     ec.data = (byte[]) ctx.writeQueue.peek();
-                    NIOTools.putInt(ec.header, ec.data.length);
+                    NIOTools.putInt(ec.header, 0, ec.data.length);
                 }
-                int len = Math.min(ctx.writeBuffer.remaining(), ec.header.length - ec.headerIndex);
-                ctx.writeBuffer.put(ec.header, ec.headerIndex, len);
-                ec.headerIndex += len;
+                n = Math.min(ctx.writeBuffer.remaining(), ec.header.length - ec.headerIndex);
+                ctx.writeBuffer.put(ec.header, ec.headerIndex, n);
+                ec.headerIndex += n;
                 if (ec.headerIndex == ec.header.length) {
                     ec.state = STATE_BODY;
                 }
                 break;
             }
             case STATE_BODY: {
-                int len = Math.min(ctx.writeBuffer.remaining(), ec.data.length - ec.dataIndex);
-                ctx.writeBuffer.put(ec.data, ec.dataIndex, len);
-                ec.dataIndex += len;
+                n = Math.min(ctx.writeBuffer.remaining(), ec.data.length - ec.dataIndex);
+                ctx.writeBuffer.put(ec.data, ec.dataIndex, n);
+                ec.dataIndex += n;
                 if (ec.dataIndex == ec.data.length) {
                     ctx.writeQueue.poll();
                     ec.headerIndex = 0;
@@ -59,5 +62,6 @@ public class ByteArrayEncoder extends ChannelEncoder {
                 break;
             }
         }
+        return n != 0;
     }
 }

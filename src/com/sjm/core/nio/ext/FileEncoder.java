@@ -8,7 +8,7 @@ import java.nio.file.StandardOpenOption;
 
 import com.sjm.core.nio.core.ChannelContext;
 import com.sjm.core.nio.core.ChannelEncoder;
-import com.sjm.core.util.Misc;
+import com.sjm.core.util.misc.Misc;
 
 /**
  * 报文类型： File（实现零拷贝）
@@ -39,16 +39,19 @@ public class FileEncoder extends ChannelEncoder {
         }
     }
 
-    public void encode(ChannelContext ctx) throws IOException {
+    public boolean encode(ChannelContext ctx) throws IOException {
         EncodeContext ec = getEncodeContext(ctx);
+        int n = -1;
         switch (ec.state) {
             case STATE_HEADER: {
                 if (ec.file == null) {
+                    if (ctx.writeQueue.isEmpty())
+                        return false;
                     ec.file = (File) ctx.writeQueue.peek();
                     ec.total = ec.file.length();
-                    NIOTools.putLong(ec.header, ec.total);
+                    NIOTools.putLong(ec.header, 0, ec.total);
                 }
-                int n = Math.min(ctx.writeBuffer.remaining(), ec.header.length - ec.headerIndex);
+                n = Math.min(ctx.writeBuffer.remaining(), ec.header.length - ec.headerIndex);
                 ctx.writeBuffer.put(ec.header, ec.headerIndex, n);
                 ec.headerIndex += n;
                 if (ec.headerIndex == ec.header.length) {
@@ -58,10 +61,10 @@ public class FileEncoder extends ChannelEncoder {
                 break;
             }
             case STATE_BODY: {
-                int len = ec.fc.read(ctx.writeBuffer);
-                if (len == -1)
+                n = ec.fc.read(ctx.writeBuffer);
+                if (n == -1)
                     throw new IOException();
-                ec.position += len;
+                ec.position += n;
                 if (ec.position == ec.total) {
                     finish(ctx, ec);
                 } else if (ec.position > ec.total)
@@ -69,6 +72,7 @@ public class FileEncoder extends ChannelEncoder {
                 break;
             }
         }
+        return n != 0;
     }
 
     protected int beforeWrite(ChannelContext ctx) throws IOException {

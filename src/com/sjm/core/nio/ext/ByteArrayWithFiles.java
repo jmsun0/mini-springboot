@@ -6,11 +6,11 @@ import java.io.IOException;
 import java.util.List;
 
 public class ByteArrayWithFiles implements Closeable {
-    public byte[] data;
+    public List<byte[]> datas;
     public List<File> files;
 
-    public ByteArrayWithFiles(byte[] data, List<File> files) {
-        this.data = data;
+    public ByteArrayWithFiles(List<byte[]> datas, List<File> files) {
+        this.datas = datas;
         this.files = files;
     }
 
