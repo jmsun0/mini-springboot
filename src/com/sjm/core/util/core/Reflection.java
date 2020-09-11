@@ -14,10 +14,8 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -143,11 +141,6 @@ public class Reflection {
         return cache.get3_2_2(Impl::getSettersMap, "getSettersMap", clazz, this);
     }
 
-    public Map<String, Object> newStrictBeanMap(Object bean) {
-        Class<?> clazz = bean.getClass();
-        return new StrictBeanMap(bean, getGettersMap(clazz), getSettersMap(clazz));
-    }
-
     public Type calculateGenericType(Type type, Class<?> superClass, Type calculateType) {
         return Reflection.Util.replaceVariable(calculateType, getTypeParameters(superClass),
                 getGenericTypeMapping(type, superClass));
@@ -190,83 +183,6 @@ public class Reflection {
             this.name = name;
             this.type = type;
             this.member = member;
-        }
-    }
-
-    public static class StrictBeanMap extends AbstractMap<String, Object> {
-        private Object bean;
-        private Map<String, GetterInfo> getters;
-        private Map<String, SetterInfo> setters;
-
-        public StrictBeanMap(Object bean, Map<String, GetterInfo> getters,
-                Map<String, SetterInfo> setters) {
-            this.bean = bean;
-            this.getters = getters;
-            this.setters = setters;
-        }
-
-        @Override
-        public Object put(String key, Object value) {
-            try {
-                setters.get(key).setter.set(bean, value);
-            } catch (Exception e) {
-            }
-            return null;
-        }
-
-        @Override
-        public Object get(Object key) {
-            try {
-                return getters.get(key).getter.get(bean);
-            } catch (Exception e) {
-            }
-            return null;
-        }
-
-        @Override
-        public boolean containsKey(Object key) {
-            try {
-                return getters.containsKey(key);
-            } catch (Exception e) {
-            }
-            return false;
-        }
-
-        @Override
-        public void clear() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public int size() {
-            return getters.size();
-        }
-
-        @Override
-        public Set<String> keySet() {
-            return getters.keySet();
-        }
-
-        @Override
-        public Collection<Object> values() {
-            return Collections.convert(getters.values(), g -> {
-                try {
-                    return g.getter.get(bean);
-                } catch (Exception ex) {
-                }
-                return null;
-            });
-        }
-
-        @Override
-        public Set<Entry<String, Object>> entrySet() {
-            return Collections.convert(getters.entrySet(), e -> {
-                try {
-                    return new Maps.MyEntry<>(e.getKey(), e.getValue().getter.get(bean));
-                } catch (Exception ex) {
-                }
-                return null;
-            });
         }
     }
 

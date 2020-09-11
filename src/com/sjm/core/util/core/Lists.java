@@ -3,13 +3,11 @@ package com.sjm.core.util.core;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
-import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
 /**
@@ -55,7 +53,7 @@ public class Lists {
 
     public static <T> List<T> from(Object arr) {
         if (arr == null)
-            return emptyList;
+            return Collections.emptyList();
         if (arr instanceof List)
             return (List) arr;
         return new MyArrayList(arr, ArrayController.valueOf(arr));
@@ -77,34 +75,6 @@ public class Lists {
 
     public static <D, S> List<D> convert(List<S> list, Function<? super S, ? extends D> func) {
         return new ConvertList<S, D>(list, func);
-    }
-
-    public static <T> List<T> sub(List<T> list, int off, int len) {
-        return new SubList<T>(list, off, len);
-    }
-
-    public static <T> List<T> concat(List<T> list1, List<T> list2) {
-        return new ConcatDoubleList<T>(list1, list2);
-    }
-
-    public static <T> List<T> reverse(List<T> list) {
-        return new ReverseList<T>(list);
-    }
-
-    public static <T> List<T> repeat(T value, int len) {
-        return new RepeatList<T>(value, len);
-    }
-
-    public static <T> List<T> function(int len, IntFunction<T> func) {
-        return new IndexFunctionList(len, func);
-    }
-
-    public static <T> List<T> writeCopy(List<T> list) {
-        return new WriteCopyList<T>(list);
-    }
-
-    public static <T> List<T> readOnly(List<T> list) {
-        return new ReadOnlyList<T>(list);
     }
 
     public static Object toArray(List<?> list, Class<?> componentType) {
@@ -146,10 +116,6 @@ public class Lists {
     public static final double[] emptyDoubleArray = new double[0];
     public static final Object[] emptyObjectArray = new Object[0];
     public static final String[] emptyStringArray = new String[0];
-
-    public static <T> List<T> emptyList() {
-        return emptyList;
-    }
 
     public static <T> int binarySearch(Object array, T key, Comparator<? super T> comp, int begin,
             int end) {
@@ -307,27 +273,6 @@ public class Lists {
         quickSort1(array, ctr, cmp, begin, end);
     }
 
-    public static <T, A> void insertSort(Object array, Comparator<? super T> cmp, int begin,
-            int end) {
-        ArrayController<T, Object> ctr = ArrayController.valueOf(array);
-        if (cmp == null)
-            cmp = DEFAULT_COMPARATOR;
-        if (begin == -1)
-            begin = 0;
-        if (end == -1)
-            end = ctr.getLength(array);
-        for (; begin < end; begin++) {
-            T value = ctr.get(array, begin);
-            for (int j = 0; j < begin; j++) {
-                if (cmp.compare(value, ctr.get(array, j)) < 0) {
-                    copy(array, ctr, j, array, ctr, j + 1, begin - j);
-                    ctr.set(array, j, value);
-                    break;
-                }
-            }
-        }
-    }
-
     public static <T> T get(Object array, int index, T defaultValue) {
         if (array == null)
             return defaultValue;
@@ -343,17 +288,6 @@ public class Lists {
     /**
      * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Private>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      */
-    private static final List emptyList = new AbstractList() {
-        @Override
-        public Object get(int index) {
-            throw new IndexOutOfBoundsException("index:" + index);
-        }
-
-        @Override
-        public int size() {
-            return 0;
-        }
-    };
 
     private static final Comparator<Object> DEFAULT_COMPARATOR =
             (o1, o2) -> ((Comparable<Object>) o1).compareTo(o2);
@@ -415,217 +349,6 @@ public class Lists {
         @Override
         public D get(int index) {
             return func.apply(list.get(index));
-        }
-    }
-    static class SubList<T> extends AbstractList<T> {
-        protected List<T> list;
-        protected int off;
-        protected int len;
-
-        public SubList(List<T> list, int off, int len) {
-            checkIndex(off, len, list.size());
-            if (list instanceof SubList) {
-                SubList<T> subList = (SubList<T>) list;
-                this.list = subList.list;
-                this.off = subList.off + off;
-                this.len = len;
-            } else {
-                this.list = list;
-                this.off = off;
-                this.len = len;
-            }
-        }
-
-        @Override
-        public int size() {
-            return len;
-        }
-
-        @Override
-        public T get(int index) {
-            checkIndex(index, len);
-            return list.get(off + index);
-        }
-
-        @Override
-        public T set(int index, T value) {
-            checkIndex(index, len);
-            return list.set(off + index, value);
-        }
-
-        @Override
-        public void add(int index, T value) {
-            checkIndex(index, len);
-            list.add(off + index, value);
-        }
-
-        @Override
-        public T remove(int index) {
-            checkIndex(index, len);
-            return list.remove(off + index);
-        }
-    }
-    static class ConcatDoubleList<T> extends AbstractList<T> {
-        protected List<T> list1, list2;
-
-        public ConcatDoubleList(List<T> list1, List<T> list2) {
-            this.list1 = list1;
-            this.list2 = list2;
-        }
-
-        @Override
-        public int size() {
-            return list1.size() + list2.size();
-        }
-
-        @Override
-        public T get(int index) {
-            int len = list1.size();
-            if (index < len)
-                return list1.get(index);
-            else
-                return list2.get(index - len);
-        }
-
-        @Override
-        public T set(int index, T value) {
-            int len = list1.size();
-            if (index < len)
-                return list1.set(index, value);
-            else
-                return list2.set(index - len, value);
-        }
-
-        @Override
-        public void add(int index, T value) {
-            int len = list1.size();
-            if (index < len)
-                list1.add(index, value);
-            else
-                list2.add(index - len, value);
-        }
-
-        @Override
-        public T remove(int index) {
-            int len = list1.size();
-            if (index < len)
-                return list1.remove(index);
-            else
-                return list2.remove(index - len);
-        }
-    }
-    static class ReverseList<T> extends AbstractList<T> {
-        protected List<T> list;
-
-        public ReverseList(List<T> list) {
-            this.list = list;
-        }
-
-        @Override
-        public int size() {
-            return list.size();
-        }
-
-        @Override
-        public T get(int index) {
-            return list.get(list.size() - index - 1);
-        }
-
-        @Override
-        public T set(int index, T value) {
-            return list.set(list.size() - index - 1, value);
-        }
-
-        @Override
-        public void add(int index, T value) {
-            list.add(list.size() - index - 1, value);
-        }
-
-        @Override
-        public T remove(int index) {
-            return list.remove(list.size() - index - 1);
-        }
-    }
-    static class RepeatList<T> extends AbstractList<T> {
-        protected T value;
-        protected int len;
-
-        public RepeatList(T value, int len) {
-            this.value = value;
-            this.len = len;
-        }
-
-        @Override
-        public int size() {
-            return len;
-        }
-
-        @Override
-        public T get(int index) {
-            checkIndex(index, len);
-            return value;
-        }
-    }
-    static class IndexFunctionList<T> extends AbstractList<T> {
-        protected int len;
-        protected IntFunction<T> func;
-
-        public IndexFunctionList(int len, IntFunction<T> func) {
-            this.len = len;
-            this.func = func;
-        }
-
-        @Override
-        public int size() {
-            return len;
-        }
-
-        @Override
-        public T get(int index) {
-            checkIndex(index, len);
-            return func.apply(index);
-        }
-    }
-    static class WriteCopyList<T> extends AbstractList<T> {
-        protected List<T> list;
-        protected Map<Integer, T> writeCopyMap = new HashMap<Integer, T>();
-
-        public WriteCopyList(List<T> list) {
-            this.list = list;
-        }
-
-        @Override
-        public int size() {
-            return list.size();
-        }
-
-        @Override
-        public T get(int index) {
-            T r = writeCopyMap.get(index);
-            return r != null ? r : list.get(index);
-        }
-
-        @Override
-        public T set(int index, T value) {
-            writeCopyMap.put(index, value);
-            return list.set(index, value);
-        }
-    }
-    static class ReadOnlyList<T> extends AbstractList<T> {
-        protected List<T> list;
-
-        public ReadOnlyList(List<T> list) {
-            this.list = list;
-        }
-
-        @Override
-        public int size() {
-            return list.size();
-        }
-
-        @Override
-        public T get(int index) {
-            return list.get(index);
         }
     }
     public static class MyArrayList<T, A> extends AbstractList<T> implements Cloneable {

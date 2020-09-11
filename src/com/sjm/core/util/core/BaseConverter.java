@@ -8,11 +8,17 @@ import java.util.function.Function;
  * Java基本数据类型之间的转换
  */
 public class BaseConverter {
+    /**
+     * 获取目标类型转换器
+     */
     @SuppressWarnings("unchecked")
     public static <T> Function<Object, T> getConverter(Class<T> clazz) {
         return (Function<Object, T>) converters.get(clazz);
     }
 
+    /**
+     * 转换为指定基本数据类型
+     */
     public static <T> T convert(Object data, Class<T> clazz) {
         return getConverter(clazz).apply(data);
     }
