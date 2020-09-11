@@ -25,9 +25,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
-import com.sjm.core.util.misc.Analyzer.Pattern;
-
+/**
+ * 可拓展的对象转换器，通常直接使用Converter.INSTANCE即可
+ */
 @SuppressWarnings({"unchecked"})
 public class Converter {
     private Converter parent;
@@ -39,10 +41,16 @@ public class Converter {
         this.parent = parent;
     }
 
+    /**
+     * 添加一个基础类型转换器
+     */
     public void addBaseConverter(Type type, Function<?, ?> func) {
         baseConverters.put(type, func);
     }
 
+    /**
+     * 获得一个缓存的任意类型转换器
+     */
     public Function<Object, Object> getConverter(Type type) {
         Function<?, ?> func = converters.get(type);
         if (func == null) {
@@ -57,6 +65,9 @@ public class Converter {
         return (Function<Object, Object>) func;
     }
 
+    /**
+     * 转换任意对象到指定类型
+     */
     public Object convert(Object data, Type type) {
         Function<Object, Object> func = getConverter(type);
         if (func == null)
@@ -532,8 +543,8 @@ public class Converter {
             return null;
         if (data instanceof Pattern)
             return (Pattern) data;
-        if (data instanceof CharSequence)
-            return Pattern.compile((CharSequence) data);
+        if (data instanceof String)
+            return Pattern.compile((String) data);
         return null;
     }
 

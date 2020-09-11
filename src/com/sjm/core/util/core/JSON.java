@@ -29,6 +29,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+
+/**
+ * 实现JSON常用方法
+ */
 @SuppressWarnings("unchecked")
 public class JSON {
     public static String toJSONString(Object obj) {

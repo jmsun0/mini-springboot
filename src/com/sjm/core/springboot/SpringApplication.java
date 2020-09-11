@@ -26,7 +26,7 @@ import javax.annotation.Resource;
 
 import com.sjm.core.logger.Logger;
 import com.sjm.core.logger.LoggerFactory;
-import com.sjm.core.util.core.ClassScaner;
+import com.sjm.core.util.misc.ClassScaner;
 import com.sjm.core.util.misc.Converters;
 
 public class SpringApplication {

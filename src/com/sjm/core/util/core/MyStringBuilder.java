@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 
+/**
+ * 自定义StringBuilder，拓展了一些额外的方法
+ */
 public class MyStringBuilder implements CharSequence, Cloneable {
     protected char[] buf;
     protected int size;

@@ -3,6 +3,7 @@ package com.sjm.core.util.core;
 import java.util.AbstractCollection;
 import java.util.AbstractList;
 import java.util.AbstractSet;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -14,6 +15,9 @@ import java.util.Stack;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+/**
+ * 集合工具类
+ */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class Collections {
     public static <T> Iterator<T> concatIterator(Iterator<Iterator<T>> arr) {
@@ -33,19 +37,19 @@ public class Collections {
     }
 
     public static <T> Iterator<T> concat(Iterator<? extends T>... arr) {
-        return concatIterator((Iterator) Lists.from(arr).iterator());
+        return concatIterator((Iterator) Arrays.asList(arr).iterator());
     }
 
     public static <T> Iterable<T> concat(Iterable<? extends T>... arr) {
-        return concatIterable((List) Lists.from(arr));
+        return concatIterable((Iterable) Arrays.asList(arr));
     }
 
     public static <T> Collection<T> concat(Collection<? extends T>... arr) {
-        return concatCollection((List) Lists.from(arr));
+        return concatCollection((Iterable) Arrays.asList(arr));
     }
 
     public static <T> Set<T> concat(Set<? extends T>... arr) {
-        return concatSet((List) Lists.from(arr));
+        return concatSet((Iterable) Arrays.asList(arr));
     }
 
     public static <T> Iterator<T> concat(T firstValue, Iterator<T> itr) {
@@ -531,6 +535,8 @@ public class Collections {
         }
     };
     private static final Set emptySet = new AbstractSet() {
+        private Object[] emptyObjectArray = {};
+
         @Override
         public Iterator iterator() {
             return emptyIterator;
@@ -558,7 +564,7 @@ public class Collections {
 
         @Override
         public Object[] toArray() {
-            return Lists.emptyObjectArray;
+            return emptyObjectArray;
         }
 
         @Override

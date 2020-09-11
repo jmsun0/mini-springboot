@@ -29,11 +29,11 @@ import com.sjm.core.util.core.Lists;
 import com.sjm.core.util.core.Maps;
 import com.sjm.core.util.core.MyStringBuilder;
 import com.sjm.core.util.core.Numbers;
-import com.sjm.core.util.core.Size;
 import com.sjm.core.util.core.Strings;
 import com.sjm.core.util.misc.Analyzer;
 import com.sjm.core.util.misc.CharFilter;
 import com.sjm.core.util.misc.Misc;
+import com.sjm.core.util.misc.Size;
 import com.sjm.core.util.misc.Source;
 
 public class LoggerFactory {

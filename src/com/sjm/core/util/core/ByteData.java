@@ -21,6 +21,9 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+/**
+ * 字节数据的抽象类，用于InputStream、Reader、byte[]、String、char[]和File之间的相互转换
+ */
 public abstract class ByteData implements Closeable {
     public static ByteData valueOf(InputStream data) {
         return new StreamData(data);
@@ -142,28 +145,32 @@ public abstract class ByteData implements Closeable {
     protected byte[] getByteBuffer() {
         byte[] buf;
         if (byteBuffer == null || (buf = byteBuffer.get()) == null)
-            byteBuffer = new WeakReference<byte[]>(buf = new byte[IOUtil.DEFAULT_BUFFER_SIZE]);
+            byteBuffer = new WeakReference<byte[]>(buf = new byte[4096]);
         return buf;
     }
 
     protected char[] getCharBuffer() {
         char[] buf;
         if (charBuffer == null || (buf = charBuffer.get()) == null)
-            charBuffer = new WeakReference<char[]>(buf = new char[IOUtil.DEFAULT_BUFFER_SIZE]);
+            charBuffer = new WeakReference<char[]>(buf = new char[4096]);
         return buf;
     }
 
     /**
-     * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Private>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+     * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Private>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      */
+
     public static final ByteData EMPTY_DATA = new ByteData() {
+        private byte[] emptyByteArray = {};
+        private char[] emptyCharArray = {};
+
         @Override
         public InputStream toStream() throws IOException {
             return IOUtil.EMPTY_STREAM;
         }
 
         public byte[] toByteArray() throws IOException {
-            return Lists.emptyByteArray;
+            return emptyByteArray;
         }
 
         public Reader toReader(String charset) throws IOException {
@@ -171,7 +178,7 @@ public abstract class ByteData implements Closeable {
         }
 
         public char[] toCharArray(String charset) throws IOException {
-            return Lists.emptyCharArray;
+            return emptyCharArray;
         }
 
         public String toString(String charSet) throws IOException {

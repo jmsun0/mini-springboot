@@ -14,7 +14,9 @@ import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.Supplier;
 
-
+/**
+ * 通用分词器
+ */
 public abstract class Lex {
     protected abstract int read();
 

@@ -1,19 +1,17 @@
 package com.sjm.core.util.core;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 
+/**
+ * 字符串工具类
+ */
 public class Strings {
     public static final String LOWCASE = "abcdefghijklmnopqrstuvwxyz";
     public static final String UPCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -167,9 +165,12 @@ public class Strings {
         return list;
     }
 
+    /**
+     * 分割字符串，去除两边空格，去除空串，转换为指定对象列表
+     */
     public static <T> List<T> splitMapper(String str, String sep,
             Function<? super String, T> mapper) {
-        List<T> list = Lists.emptyList();
+        List<T> list = new ArrayList<>();
         if (str != null && !str.isEmpty()) {
             String[] arr = str.split(sep);
             for (String s : arr) {
@@ -184,6 +185,9 @@ public class Strings {
         return list;
     }
 
+    /**
+     * 按行分割，去除两边空格，去除空串
+     */
     public static List<String> toNonEmptyLines(String str) {
         List<String> list = new ArrayList<>();
         for (int index = 0, len = str.length(); index < len;) {
@@ -357,97 +361,6 @@ public class Strings {
 
     public static byte[] decodeBase64(char[] src) {
         return decodeBase64(src, 0, src.length);
-    }
-
-    public static class ByteSequence implements CharSequence {
-        private byte[] data;
-        private int size;
-
-        public ByteSequence(int cap) {
-            data = new byte[cap];
-        }
-
-        @Override
-        public char charAt(int index) {
-            return (char) data[index];
-        }
-
-        @Override
-        public int length() {
-            return size;
-        }
-
-        @Override
-        public CharSequence subSequence(int start, int end) {
-            return new String(data, start, end - start);
-        }
-
-        @Override
-        public String toString() {
-            return toString(Charset.defaultCharset());
-        }
-
-        public String toString(Charset charset) {
-            return new String(data, 0, size, charset);
-        }
-
-        public int size() {
-            return size;
-        }
-
-        public boolean isEmpty() {
-            return size == 0;
-        }
-
-        public void clear() {
-            size = 0;
-        }
-
-        public byte[] getLocalBytes() {
-            return data;
-        }
-
-        public void setSize(int size) {
-            this.size = size;
-        }
-
-        public void getBytes(int srcBegin, int srcEnd, byte[] dst, int dstBegin) {
-            System.arraycopy(data, srcBegin, dst, dstBegin, srcEnd - srcBegin);
-        }
-
-        public byte[] toByteArray() {
-            return Arrays.copyOfRange(data, 0, size);
-        }
-
-        public byte get(int index) {
-            return data[index];
-        }
-
-        public void put(byte b) {
-            resize(1);
-            data[size++] = b;
-        }
-
-        public void put(byte[] v, int off, int len) {
-            resize(len);
-            System.arraycopy(v, off, data, size, len);
-            size += len;
-        }
-
-        public void put(byte[] v) {
-            put(v, 0, v.length);
-        }
-
-        private void resize(int addSize) {
-            int newSize = size + addSize;
-            if (newSize > data.length) {
-                if (newSize < data.length * 2)
-                    newSize = data.length * 2;
-                byte[] newBuf = new byte[newSize];
-                System.arraycopy(data, 0, newBuf, 0, data.length);
-                data = newBuf;
-            }
-        }
     }
 
     public static int checkLeft(int left) {
@@ -720,37 +633,9 @@ public class Strings {
         return 0;
     }
 
-    public static void hexdump(InputStream is) throws IOException {
-        byte[] b = new byte[16];
-        int offset = 0, n;
-        MyStringBuilder sb = new MyStringBuilder();
-        while ((n = is.read(b)) != -1) {
-            sb.append("0x").append(offset, Strings.LOWCASE_HEX_CHARS, 16, 8).append(":  ");
-            for (int i = 0; i < n; i++)
-                sb.append(b[i] & 0xff, Strings.LOWCASE_HEX_CHARS, 16, 2).append(" ");
-            for (int i = n; i < 16; i++)
-                sb.append("   ");
-            sb.append("  ");
-            for (int i = 0; i < n; i++) {
-                char c = (char) b[i];
-                if (!Strings.isPrintable(c))
-                    c = '.';
-                sb.append(c);
-            }
-            System.out.println(sb);
-            sb.clear();
-            offset += n;
-        }
-    }
-
-    public static void hexdump(byte[] bytes) {
-        try {
-            hexdump(new ByteArrayInputStream(bytes));
-        } catch (IOException e) {
-            throw new Error();
-        }
-    }
-
+    /**
+     * 索引字符出现的位置，但是忽略转义符号
+     */
     public static int indexOfIgnoreEscape(CharSequence str, char c, int from, int to) {
         from = checkLeft(from);
         to = checkRight(to, str);
@@ -766,7 +651,7 @@ public class Strings {
         return -1;
     }
 
-    public static int indexOfRightQuotation(CharSequence str, int from, int to) {
+    private static int indexOfRightQuotation(CharSequence str, int from, int to) {
         from = checkLeft(from);
         to = checkRight(to, str);
         char yh = str.charAt(from);
@@ -778,6 +663,9 @@ public class Strings {
         return end;
     }
 
+    /**
+     * 索引字符出现的位置，但是忽略引号内的部分
+     */
     public static int indexOfIgnoreQuotation(CharSequence str, char c, int from, int to) {
         from = checkLeft(from);
         to = checkRight(to, str);

@@ -26,6 +26,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 
+/**
+ * 反射缓存工具类
+ */
 public class Reflection {
     public static final Reflection INSTANCE = new Reflection(Cache.newInstance());
 
@@ -704,6 +707,9 @@ public class Reflection {
         }
     }
 
+    /**
+     * 用于动态生成几种泛型Type
+     */
     public static class Types {
         public static GenericArrayType newGenericArrayType(Type genericComponentType) {
             return new GenericArrayType() {

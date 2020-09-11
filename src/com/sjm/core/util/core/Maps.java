@@ -18,7 +18,9 @@ import java.util.function.Function;
 import java.util.function.ToIntFunction;
 
 
-
+/**
+ * Map工具类
+ */
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class Maps {
 
@@ -110,28 +112,6 @@ public class Maps {
             Function<? super E, ? extends K> keyMapper,
             Function<? super E, ? extends V> valueMapper) {
         return putAll(new HashMap<>(), values, keyMapper, valueMapper);
-    }
-
-    public static <K, E> Map<K, Integer> groupByIndex(List<E> list,
-            Function<? super E, ? extends K> keyMapper) {
-        Map<K, Integer> map = new HashMap<>();
-        for (int i = 0, len = list.size(); i < len; i++)
-            map.put(keyMapper.apply(list.get(i)), i);
-        return map;
-    }
-
-    public static <K, E> Map<K, Integer> groupByCount(Iterable<E> itr,
-            Function<? super E, ? extends K> keyMapper) {
-        Map<K, Integer> map = new HashMap<>();
-        for (E e : itr) {
-            K key = keyMapper.apply(e);
-            Integer n = map.get(key);
-            if (n == null)
-                map.put(key, 1);
-            else
-                map.put(key, n + 1);
-        }
-        return map;
     }
 
     public static <K, V> Map<K, V> merge(List<Map<K, V>> maps) {

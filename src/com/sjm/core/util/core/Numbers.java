@@ -3,6 +3,9 @@ package com.sjm.core.util.core;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+/**
+ * 数字处理工具
+ */
 public class Numbers {
     private static final int[] NUMBER_LOCATION = new int[128];
 

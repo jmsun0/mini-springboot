@@ -1,4 +1,4 @@
-package com.sjm.core.util.core;
+package com.sjm.core.util.misc;
 
 import java.io.File;
 import java.lang.reflect.Field;

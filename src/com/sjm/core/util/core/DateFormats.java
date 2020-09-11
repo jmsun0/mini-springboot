@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 常用日期格式
+ */
 public class DateFormats {
     private static final Map<String, DateFormats> caches = new ConcurrentHashMap<>();
 

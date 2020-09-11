@@ -24,9 +24,11 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 
-public class IOUtil {
-    public static int DEFAULT_BUFFER_SIZE = 4096;
 
+/**
+ * IO工具类
+ */
+public class IOUtil {
     public static final String LINE_SEPARATOR = System.getProperty("line.separator");
     public static final byte[] LINE_SEPARATOR_BYTES = LINE_SEPARATOR.getBytes();
 
@@ -83,8 +85,6 @@ public class IOUtil {
 
     public static void copy(InputStream in, OutputStream out, byte[] buffer, boolean flush)
             throws IOException {
-        if (buffer == null)
-            buffer = new byte[DEFAULT_BUFFER_SIZE];
         if (flush)
             for (int len; (len = in.read(buffer)) != -1;) {
                 out.write(buffer, 0, len);
@@ -97,8 +97,6 @@ public class IOUtil {
 
     public static void copy(Reader in, Writer out, char[] buffer, boolean flush)
             throws IOException {
-        if (buffer == null)
-            buffer = new char[DEFAULT_BUFFER_SIZE];
         if (flush)
             for (int len; (len = in.read(buffer)) != -1;) {
                 out.write(buffer, 0, len);
@@ -107,44 +105,6 @@ public class IOUtil {
         else
             for (int len; (len = in.read(buffer)) != -1;)
                 out.write(buffer, 0, len);
-    }
-
-    public static int readLine(InputStream is, byte[] buffer) throws IOException {
-        int i = 0;
-        for (int c; (c = is.read()) != -1;) {
-            if (c == '\n') {
-                if (i > 0 && buffer[i - 1] == '\r')
-                    i--;
-                return i;
-            }
-            buffer[i++] = (byte) c;
-        }
-        if (i == 0)
-            return -1;
-        return i;
-    }
-
-    public static String readLine(InputStream is, byte[] buffer, Charset charset)
-            throws IOException {
-        int len = readLine(is, buffer);
-        return len == -1 ? null : len == 0 ? "" : new String(buffer, 0, len, charset);
-    }
-
-    public static int readLine(InputStream is, Strings.ByteSequence seq) throws IOException {
-        int i = 0;
-        for (int c; (c = is.read()) != -1; i++) {
-            if (c == '\n') {
-                if (i > 0 && seq.get(i - 1) == '\r') {
-                    i--;
-                    seq.setSize(i);
-                }
-                return i;
-            }
-            seq.put((byte) c);
-        }
-        if (i == 0)
-            return -1;
-        return i;
     }
 
     public static Charset getCharset(String charset) {
@@ -226,10 +186,6 @@ public class IOUtil {
 
     public static InputStream convert(final WriteTo wt, int buffer, Executor ex,
             final Closeable c) {
-        if (buffer == -1)
-            buffer = DEFAULT_BUFFER_SIZE;
-        if (ex == null)
-            ex = command -> new Thread(command).start();
         final Pipe pipe = new Pipe(buffer) {
             @Override
             public void close() {
@@ -259,7 +215,7 @@ public class IOUtil {
     }
 
     /**
-     * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以下均为具体实现>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+     * >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>Private>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
      */
 
     static class ReaderInputStream extends InputStream {
@@ -385,7 +341,7 @@ public class IOUtil {
         public void flush() throws IOException {
             flush0();
             if (bbuf.position() != 0)
-                throw new IOException("刷新失败，不是完整编码");
+                throw new IOException("Refresh failed, not complete code");
             writer.flush();
         }
 
@@ -429,10 +385,6 @@ public class IOUtil {
 
         public Pipe(int cap) {
             arr = new byte[cap];
-        }
-
-        public Pipe() {
-            this(IOUtil.DEFAULT_BUFFER_SIZE);
         }
 
         public synchronized void closeRead() {
@@ -607,6 +559,113 @@ public class IOUtil {
                     Pipe.this.flush();
                 }
             };
+        }
+    }
+    public static class ByteSequence implements CharSequence {
+        private byte[] data;
+        private int size;
+
+        public ByteSequence(int cap) {
+            data = new byte[cap];
+        }
+
+        @Override
+        public char charAt(int index) {
+            return (char) data[index];
+        }
+
+        @Override
+        public int length() {
+            return size;
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return new String(data, start, end - start);
+        }
+
+        @Override
+        public String toString() {
+            return toString(Charset.defaultCharset());
+        }
+
+        public String toString(Charset charset) {
+            return new String(data, 0, size, charset);
+        }
+
+        public int size() {
+            return size;
+        }
+
+        public boolean isEmpty() {
+            return size == 0;
+        }
+
+        public void clear() {
+            size = 0;
+        }
+
+        public byte[] getLocalBytes() {
+            return data;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
+
+        public void getBytes(int srcBegin, int srcEnd, byte[] dst, int dstBegin) {
+            System.arraycopy(data, srcBegin, dst, dstBegin, srcEnd - srcBegin);
+        }
+
+        public byte[] toByteArray() {
+            return Arrays.copyOfRange(data, 0, size);
+        }
+
+        public byte get(int index) {
+            return data[index];
+        }
+
+        public void put(byte b) {
+            resize(1);
+            data[size++] = b;
+        }
+
+        public void put(byte[] v, int off, int len) {
+            resize(len);
+            System.arraycopy(v, off, data, size, len);
+            size += len;
+        }
+
+        public void put(byte[] v) {
+            put(v, 0, v.length);
+        }
+
+        private void resize(int addSize) {
+            int newSize = size + addSize;
+            if (newSize > data.length) {
+                if (newSize < data.length * 2)
+                    newSize = data.length * 2;
+                byte[] newBuf = new byte[newSize];
+                System.arraycopy(data, 0, newBuf, 0, data.length);
+                data = newBuf;
+            }
+        }
+
+        public int readLine(InputStream is) throws IOException {
+            int i = 0;
+            for (int c; (c = is.read()) != -1; i++) {
+                if (c == '\n') {
+                    if (i > 0 && get(i - 1) == '\r') {
+                        i--;
+                        setSize(i);
+                    }
+                    return i;
+                }
+                put((byte) c);
+            }
+            if (i == 0)
+                return -1;
+            return i;
         }
     }
 }

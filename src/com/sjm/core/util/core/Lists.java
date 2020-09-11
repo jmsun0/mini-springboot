@@ -12,6 +12,9 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
+/**
+ * List工具类
+ */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class Lists {
     public static List<Integer> from(int[] arr) {

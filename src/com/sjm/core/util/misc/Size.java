@@ -1,4 +1,8 @@
-package com.sjm.core.util.core;
+package com.sjm.core.util.misc;
+
+import com.sjm.core.util.core.Lex;
+import com.sjm.core.util.core.Numbers;
+import com.sjm.core.util.core.Strings;
 
 public enum Size {
     B(1), KB(1024), MB(1024 * 1024), GB(1024 * 1024 * 1024), TB(1024 * 1024 * 1024 * 1024);

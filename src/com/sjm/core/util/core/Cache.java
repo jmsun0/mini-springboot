@@ -4,6 +4,9 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.function.Supplier;
 
+/**
+ * 通用缓存容器
+ */
 @SuppressWarnings("unchecked")
 public abstract class Cache {
     public static final Cache INSTANCE = Cache.newInstance();
@@ -26,7 +29,7 @@ public abstract class Cache {
     }
 
     public static Cache newThreadLocalInstance() {
-        return newThreadLocalInstance(Cache::newInstance);
+        return newThreadLocalInstance(() -> newInstance(false));
     }
 
     /**
@@ -283,7 +286,7 @@ public abstract class Cache {
         @Override
         public boolean equals(Object obj) {
             CacheKey that = (CacheKey) obj;
-            return equals(keys, count, that.keys, that.count);
+            return that != null && equals(keys, count, that.keys, that.count);
         }
 
         private static boolean equals(Object[] keys1, int count1, Object[] keys2, int count2) {

@@ -1,4 +1,4 @@
-package com.sjm.core.util.core;
+package com.sjm.core.util.misc;
 
 public final class Platform {
     public static enum OSType {

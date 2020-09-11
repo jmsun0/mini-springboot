@@ -1,8 +1,9 @@
-package com.sjm.core.util.core;
+package com.sjm.core.util.misc;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Comparator;
@@ -11,6 +12,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.sjm.core.util.core.MyStringBuilder;
+import com.sjm.core.util.core.Strings;
 
 public class Misc {
     public static final Comparator<Object> DEFAULT_COMPARATOR = new Comparator<Object>() {
@@ -105,5 +109,36 @@ public class Misc {
 
     public static Object deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
         return new ObjectInputStream(new ByteArrayInputStream(bytes)).readObject();
+    }
+
+    public static void hexdump(InputStream is) throws IOException {
+        byte[] b = new byte[16];
+        int offset = 0, n;
+        MyStringBuilder sb = new MyStringBuilder();
+        while ((n = is.read(b)) != -1) {
+            sb.append("0x").append(offset, Strings.LOWCASE_HEX_CHARS, 16, 8).append(":  ");
+            for (int i = 0; i < n; i++)
+                sb.append(b[i] & 0xff, Strings.LOWCASE_HEX_CHARS, 16, 2).append(" ");
+            for (int i = n; i < 16; i++)
+                sb.append("   ");
+            sb.append("  ");
+            for (int i = 0; i < n; i++) {
+                char c = (char) b[i];
+                if (!Strings.isPrintable(c))
+                    c = '.';
+                sb.append(c);
+            }
+            System.out.println(sb);
+            sb.clear();
+            offset += n;
+        }
+    }
+
+    public static void hexdump(byte[] bytes) {
+        try {
+            hexdump(new ByteArrayInputStream(bytes));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

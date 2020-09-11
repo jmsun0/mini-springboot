@@ -4,7 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-
+/**
+ * Java基本数据类型之间的转换
+ */
 public class BaseConverter {
     @SuppressWarnings("unchecked")
     public static <T> Function<Object, T> getConverter(Class<T> clazz) {

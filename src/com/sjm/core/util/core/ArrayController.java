@@ -25,6 +25,9 @@ public abstract class ArrayController<T, A> {
 
     public abstract A clone(A arr);
 
+    /**
+     * 根据元素类型获取数组控制器
+     */
     @SuppressWarnings("unchecked")
     public static <T, A> ArrayController<T, A> valueOf(Class<?> componentType) {
         ArrayController<?, ?> ctrl = ctrlMap.get(componentType);
@@ -37,6 +40,9 @@ public abstract class ArrayController<T, A> {
         return (ArrayController<T, A>) ctrl;
     }
 
+    /**
+     * 根据数组对象获取数组控制器
+     */
     @SuppressWarnings("unchecked")
     public static <T, A> ArrayController<T, A> valueOf(Object arr) {
         ArrayController<?, ?> ctrl;

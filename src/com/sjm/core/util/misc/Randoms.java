@@ -1,4 +1,6 @@
-package com.sjm.core.util.core;
+package com.sjm.core.util.misc;
+
+import com.sjm.core.util.core.Strings;
 
 public class Randoms {
     private static final long multiplier = 0x5DEECE66DL;

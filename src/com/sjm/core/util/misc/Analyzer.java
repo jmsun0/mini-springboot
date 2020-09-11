@@ -1,944 +1,1116 @@
 package com.sjm.core.util.misc;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Deque;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import com.sjm.core.util.core.JSON;
+import com.sjm.core.util.core.Lex;
 import com.sjm.core.util.core.MyStringBuilder;
-import com.sjm.core.util.core.Numbers;
-import com.sjm.core.util.core.Strings;
+import com.sjm.core.util.core.JSON.Serializers;
+import com.sjm.core.util.core.Lex.Builder;
+import com.sjm.core.util.core.Lex.DFAState;
+import com.sjm.core.util.core.Lex.StringLex;
+
+public class Analyzer {
+
+    public static void main1(String[] args) {
+        // Builder<StringLex<String>> builder = new Builder<>();
+        // builder.initNFA();
+        // // builder.setAsciiMapOptimizeThreshold(-1);
+        // // builder.setArrayMapOptimizeThreshold(-1);
+        //
+        // builder.defineActionTemplate("finish", (lex, a) -> lex.finish((String) a[0]));
+        // builder.defineActionTemplate("rollback", (lex, a) -> lex.rollback());
+        // builder.definePattern("NUMBER", "-?[0-9]+");
+        //
+        // builder.addPattern("START", "${NUMBER}#{finish('NUMBER')}");
+        // builder.addPattern("START", "ab[cd]#{finish('world')}");
+        // builder.addPattern("START", "ab[bc]#{finish('hello')}");
+        //
+        // System.out.println(builder.declaration);
+        // DFAState start = builder.buildDFA("START");
+        //
+        // System.out.println(builder.declaration);
+        // System.out.println(builder.stateIdGenerator.id);
+        //
+        // System.out.println(start.transfer);
+        //
+        // StringLex<String> lex = new StringLex<String>(start);
+        //
+        // lex.reset("abb-1abb");
+        //
+        // System.out.println(lex.next());
+        // System.out.println(lex.next());
+        // System.out.println(lex.next());
+
+        // JSONLex lex = new JSONLex();
+        // lex.reset("1 nul[\"\"");
+        //
+        // System.out.println(lex.next());
+        // System.out.println(lex.next());
+
+        // LL1Pattern num = LL1Pattern.term("num");
+        // LL1Pattern id = LL1Pattern.term("id");
+        // LL1Pattern add = LL1Pattern.term("+");
+        // LL1Pattern sub = LL1Pattern.term("-");
+        // LL1Pattern mul = LL1Pattern.term("*");
+        // LL1Pattern lsb = LL1Pattern.term("(");
+        // LL1Pattern rsb = LL1Pattern.term(")");
+
+        // LL1Pattern a = LL1Pattern.term("a");
+        // LL1Pattern b = LL1Pattern.term("b");
+        // LL1Pattern c = LL1Pattern.term("c");
+        //
+        // LL1Pattern S = LL1Pattern.nonterm("S");
+        // LL1Pattern Q = LL1Pattern.nonterm("Q");
+        // LL1Pattern R = LL1Pattern.nonterm("R");
+        //
+        // S.patterns = newList(newList(Q, c), newList(c));
+        // Q.patterns = newList(newList(R, b), newList(b));
+        // R.patterns = newList(newList(S, a), newList(a));
+        //
+        // List<LL1Pattern> list = newList(R, Q, S);
 
 
-public class Analyzer<K> {
-    public static void main(String[] args) {
-        Source<Analyzers.JSONWord> src = Analyzers.JSONAnalyzer.analyze(
-                "{\r\n" + "  \"code\": 0,\r\n" + "  \"message\": \"OK\",\r\n" + "  \"data\": {\r\n"
-                        + "    \"webNotice\": 0,\r\n" + "    \"smsNotice\": 0,\r\n"
-                        + "    \"emailNotice\": 0,\r\n" + "    \"smsServerAddr\": null,\r\n"
-                        + "    \"mailServerAddr\": null\r\n" + "  }\r\n" + "}/*dddd*/// adasdas ");
-        Source.print(src, Analyzers.JSONWord.EOF);
+        // LL1Pattern P = LL1Pattern.nonterm("P");
+        //
+        // P.patterns = newList(newList(P, add, P), newList(num));
+        //
+        // List<LL1Pattern> list = newList(P);
+
+        // LL1Pattern E = LL1Pattern.nonterm("E");
+        // LL1Pattern E1 = LL1Pattern.nonterm("E1");
+        // LL1Pattern T = LL1Pattern.nonterm("T");
+        // LL1Pattern T1 = LL1Pattern.nonterm("T1");
+        // LL1Pattern F = LL1Pattern.nonterm("F");
+        //
+        // E.patterns = newList(newList(T, E1));
+        // E1.patterns = newList(newList(add, T, E1), LL1Converter.EPSILON_LIST);
+        // T.patterns = newList(newList(F, T1));
+        // T1.patterns = newList(newList(mul, F, T1), LL1Converter.EPSILON_LIST);
+        // F.patterns = newList(newList(lsb, E, rsb), newList(id));
+        //
+        // List<LL1Pattern> list = newList(E, E1, T, T1, F);
+        //
+        // list.forEach(System.out::println);
+        // System.out.println();
+
+        // LL1Converter.removeLeftRecursion(list);
+        // list.forEach(System.out::println);
+        // System.out.println();
+
+        // LL1Converter.calculateFirst(list);
+        // list.forEach(System.out::println);
+        // System.out.println();
+        //
+        // LL1Converter.calculateFollow(list);
+        // list.forEach(System.out::println);
+        // System.out.println();
     }
 
-    public static class Analyzers {
-        public static enum JSONWord {
-            EOF, BLANK, TEXT, NUMBER, QUOTATION, TRUE, FALSE, NULL, LEFT_BIG_BRACKETS, RIGHT_BIG_BRACKETS, LEFT_MEDIUM_BRACKETS, RIGHT_MEDIUM_BRACKETS, COMMA, COLON, COMMENT
+    @SafeVarargs
+    private static <T> List<T> newList(T... values) {
+        List<T> list = new ArrayList<>();
+        for (T value : values)
+            list.add(value);
+        return list;
+    }
+
+    static class LL1Converter {
+        private static int tmpOrdinal = 0;
+        private static boolean hasAction = true;
+
+        public static LL1Pattern[] process(List<LL1Pattern> nontermList,
+                List<LL1Pattern> termList) {
+            removeLeftRecursion(nontermList);
+            extractCommonLeft(nontermList);
+            LL1Pattern[] nonterms = nontermList.toArray(new LL1Pattern[nontermList.size()]);
+            calculateFirst(nonterms);
+            calculateFollow(nonterms);
+            calculateAnalyzeTable(nonterms, termList.size());
+            return nonterms;
         }
 
-        public static final Analyzer<JSONWord> JSONAnalyzer;
-        static {
-            Analyzer<JSONWord> alz = JSONAnalyzer = new Analyzer<JSONWord>();
-            alz.setText(JSONWord.TEXT);
-            alz.setEOF(JSONWord.EOF);
-            alz.setBlank(Strings.BLANK, JSONWord.BLANK);
-            alz.setEscape('\'', JSONWord.QUOTATION);
-            alz.setEscape('\"', JSONWord.QUOTATION);
-            alz.setNumber(JSONWord.NUMBER);
-            alz.setString("true", JSONWord.TRUE);
-            alz.setString("false", JSONWord.FALSE);
-            alz.setString("null", JSONWord.NULL);
-            alz.setSymbol("{", JSONWord.LEFT_BIG_BRACKETS);
-            alz.setSymbol("}", JSONWord.RIGHT_BIG_BRACKETS);
-            alz.setSymbol("[", JSONWord.LEFT_MEDIUM_BRACKETS);
-            alz.setSymbol("]", JSONWord.RIGHT_MEDIUM_BRACKETS);
-            alz.setSymbol(",", JSONWord.COMMA);
-            alz.setSymbol(":", JSONWord.COLON);
-            alz.setPattern("//.*?[$\\n]", JSONWord.COMMENT);
-            alz.setPattern("/\\*.*?\\*/", JSONWord.COMMENT);
+        private static void removeLeftRecursion(List<LL1Pattern> nonterms) {
+            for (int i = 0, len = nonterms.size(); i < len; i++) {
+                LL1Pattern pattern = nonterms.get(i);
+                for (int j = 0; j < i; j++)
+                    replaceFirst(pattern, nonterms.get(j));
+                LL1Pattern tmp = removeDirectLeftRecursion(pattern);
+                if (tmp != null)
+                    nonterms.add(tmp);
+            }
         }
-    }
 
-    private CharFilter textHead = Ftr.TextHead, textBody = Ftr.TextBody, textTail = Ftr.TextTail;
-    private State start;
-
-    public Analyzer() {
-        start = new DefaultState();
-    }
-
-    public void setModel(Model model) {
-        model.addState(0, this.start);
-        model.apply();
-    }
-
-    public void setPattern(Pattern pattern, K key) {
-        Model model = new Model();
-        PatternContext ctx = new PatternContext(model);
-        pattern.build(ctx);
-        model.addAction(ctx.last, Action.finish(key));
-        setModel(model);
-    }
-
-    public void setPattern(CharSequence regex, K key) {
-        setPattern(Pattern.compile(regex), key);
-    }
-
-    public void setText(K key) {
-        Pattern pattern = Pattern.link(Pattern.single(textHead),
-                Pattern.repeat(Pattern.single(textBody), 0, -1, true));
-        setPattern(pattern, key);
-    }
-
-    public void setString(CharSequence str, K key) {
-        Object[] patterns = new Object[str.length() + 2];
-        for (int i = 0; i < str.length(); i++)
-            patterns[i] = Pattern.single(str.charAt(i));
-        patterns[str.length()] = Pattern.single(textTail);
-        patterns[str.length() + 1] = Action.Back;
-        Pattern pattern = Pattern.link(patterns);
-        setPattern(pattern, key);
-    }
-
-    public void setSymbol(CharSequence str, K key) {
-        Object[] patterns = new Object[str.length()];
-        for (int i = 0; i < patterns.length; i++)
-            patterns[i] = Pattern.single(str.charAt(i));
-        Pattern pattern = Pattern.link(patterns);
-        setPattern(pattern, key);
-    }
-
-    public void setBlank(CharSequence chars, K key) {
-        for (int i = 0; i < chars.length(); i++) {
-            Pattern pattern = Pattern.single(chars.charAt(i));
-            setPattern(pattern, key);
-        }
-    }
-
-    public void setEOF(K key) {
-        Pattern pattern = Pattern.single(-1);
-        setPattern(pattern, key);
-    }
-
-    public void setEscape(char quotation, K key) {
-        Model model = new Model();
-        model.addLine(0, quotation, 1);
-        model.addLine(1, '\\', 2);
-        model.addLine(1, quotation, 3);
-        model.addLine(1, CharFilter.Any, 1);
-        model.addLine(2, CharFilter.Any, 1);
-
-        model.addAction(3, Action.finish(key));
-
-        setModel(model);
-    }
-
-    public void setNumber(K key) {
-        // Pattern pint = Pattern.repeat(Pattern.single(CharFilter.DecimalNumber), 1, -1, true);
-        // Pattern pintfloat = Pattern.link(pint,
-        // Pattern.repeat(Pattern.link(Pattern.single('.'), pint), 0, 1, true));
-        // Pattern pScience =
-        // Pattern.link(pintfloat,
-        // Pattern.repeat(Pattern.link(Pattern.single(
-        // CharFilter.or(CharFilter.equal('e'), CharFilter.equal('E'))), pint),
-        // 0, 1, true));
-        // setPattern(pScience, key);
-        CharFilter AddSub = CharFilter.or(CharFilter.equal('+'), CharFilter.equal('-'));
-        CharFilter eE = CharFilter.or(CharFilter.equal('e'), CharFilter.equal('E'));
-        Model model = new Model();
-        model.addLine(0, AddSub, 1);
-        model.addLine(0, CharFilter.DecimalNumber, 2);
-        model.addLine(1, CharFilter.DecimalNumber, 2);
-        model.addLine(2, CharFilter.DecimalNumber, 2);
-        model.addLine(2, CharFilter.equal('.'), 4);
-        model.addLine(2, eE, 6);
-        model.addLine(2, null, 3);
-        model.addLine(4, CharFilter.DecimalNumber, 5);
-        model.addLine(5, CharFilter.DecimalNumber, 5);
-        model.addLine(5, eE, 6);
-        model.addLine(5, null, 3);
-        model.addLine(6, AddSub, 7);
-        model.addLine(6, CharFilter.DecimalNumber, 8);
-        model.addLine(7, CharFilter.DecimalNumber, 8);
-        model.addLine(8, CharFilter.DecimalNumber, 8);
-        model.addLine(8, null, 3);
-
-        model.addAction(3, Action.finish(key));
-        setModel(model);
-    }
-
-    public Source<K> analyze(final CharSequence str) {
-        final Context ctx = new DefaultContext(str);
-        return new Source<K>() {
+        private static LL1Pattern removeDirectLeftRecursion(LL1Pattern nonterms) {
+            List<LL1Prod> list = nonterms.prods;
             int index;
-            CharSequence value = new CharSequence() {
-                @Override
-                public CharSequence subSequence(int start, int end) {
-                    return str.subSequence(index + start, index + end);
-                }
-
-                @Override
-                public int length() {
-                    return ctx.index() - index;
-                }
-
-                @Override
-                public char charAt(int i) {
-                    return str.charAt(index + i);
-                }
-
-                @Override
-                public String toString() {
-                    return new MyStringBuilder().append(str, index, ctx.index()).toString();
-                }
-            };
-
-            @Override
-            public CharSequence getValue() {
-                return value;
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public K next() {
-                try {
-                    index = ctx.index();
-                    start.move(ctx);
-                } catch (SuccessException e) {
-                    return (K) ctx.getKey();
-                } catch (Throwable e) {
-                    throw new RuntimeException("next() occur an exception ["
-                            + e.getClass().getSimpleName() + "] ,string=" + str);
-                }
-                throw new RuntimeException();
-            }
-        };
-    }
-
-    interface State {
-        public void add(Object con, State[] sts);
-
-        public void move(Context ctx);
-
-        public void addAction(Action action);
-    }
-
-    public static class DefaultState implements State {
-        static class FilterStates {
-            CharFilter filter;
-            State[] states;
-
-            FilterStates(CharFilter filter, State[] states) {
-                this.filter = filter;
-                this.states = states;
-            }
-        }
-
-        private Map<Integer, List<State>> stateMap = Collections.emptyMap();
-        private List<FilterStates> stateList = Collections.emptyList();
-        private List<Action> actions = Collections.emptyList();
-
-        private void add(int ch, State... sts) {
-            if (stateMap.isEmpty())
-                stateMap = new HashMap<>();
-            List<State> list = stateMap.get(ch);
-            if (list == null)
-                stateMap.put(ch, list = new ArrayList<>());
-            for (State st : sts)
-                list.add(st);
-        }
-
-        private void add(CharFilter cf, State... sts) {
-            if (stateList.isEmpty())
-                stateList = new ArrayList<>();
-            stateList.add(new FilterStates(cf, sts));
-        }
-
-        @Override
-        public void add(Object con, State[] sts) {
-            if (con instanceof Integer)
-                add((int) con, sts);
-            else
-                add((CharFilter) con, sts);
-        }
-
-        @Override
-        public void move(Context ctx) {
-            for (int i = 0, len = actions.size(); i < len; i++)
-                actions.get(i).perform(this, ctx);
-            int ch = ctx.read();
-            List<State> sts = stateMap.get(ch);
-            if (sts != null)
-                for (int i = 0, len = sts.size(); i < len; i++)
-                    sts.get(i).move(ctx);
-            for (int i = 0, len = stateList.size(); i < len; i++) {
-                FilterStates fst = stateList.get(i);
-                if (fst.filter == null) {
-                    ctx.back();
-                    for (State states : fst.states)
-                        states.move(ctx);
-                    ctx.read();
-                } else if (fst.filter.accept(ch)) {
-                    for (State states : fst.states)
-                        states.move(ctx);
+            for (index = 0; index < list.size(); index++)
+                if (list.get(index).pwas.get(0).pattern == nonterms)
+                    break;
+            if (index == list.size())
+                return null;
+            List<LL1Prod> newList = newList();
+            LL1Pattern tmp = LL1Pattern.nonterm("TMP_" + tmpOrdinal++, newList);
+            for (int i = list.size() - 1; i >= 0; i--) {
+                List<PatternWithAction> pwas = list.get(i).pwas;
+                PatternWithAction newTmp = new PatternWithAction(tmp, null);
+                if (pwas.get(0).pattern == nonterms) {
+                    LL1Prod prod = list.remove(i);
+                    List<PatternWithAction> tmpPwas = prod.pwas;
+                    if (hasAction) {
+                        LL1Action action = tmpPwas.get(tmpPwas.size() - 1).action;
+                        action.expr.move(-1);
+                        action.expr.replace(-1, -1, "i");
+                        action.dst = new LL1Variable(tmpPwas.size() - 1, "i");
+                        newTmp.action = new LL1Action(new LL1Variable(-1, "s"),
+                                new LL1Variable(tmpPwas.size() - 1, "s"));
+                    }
+                    tmpPwas.remove(0);
+                    tmpPwas.add(newTmp);
+                    newList.add(prod);
+                } else {
+                    if (hasAction) {
+                        LL1Action action = pwas.get(pwas.size() - 1).action;
+                        LL1Variable dst = action.dst;
+                        action.dst = new LL1Variable(pwas.size(), "i");
+                        newTmp.action = new LL1Action(dst, new LL1Variable(pwas.size(), "s"));
+                    }
+                    pwas.add(newTmp);
                 }
             }
-            ctx.back();
+            LL1Action action =
+                    hasAction ? new LL1Action(new LL1Variable(-1, "s"), new LL1Variable(-1, "i"))
+                            : null;
+            newList.add(new LL1Prod(newList(new PatternWithAction(LL1Pattern.EPSILON, action))));
+            return tmp;
         }
 
-        @Override
-        public void addAction(Action action) {
-            if (actions.isEmpty())
-                actions = new ArrayList<>();
-            actions.add(action);
-        }
-    }
-    static class SuccessException extends RuntimeException {
-        private static final long serialVersionUID = 1L;
-        public static final SuccessException INSTANCE = new SuccessException();
-    }
-    interface Context {
-        public int read();
-
-        public void back();
-
-        public int index();
-
-        public void setKey(Object key);
-
-        public Object getKey();
-    }
-    static class DefaultContext implements Context {
-        private CharSequence str;
-        private int index;
-        private int end;
-        private Object key;
-
-        DefaultContext(CharSequence str) {
-            this.str = str;
-            this.end = str.length();
-        }
-
-        @Override
-        public int read() {
-            int ch = index < end && index >= 0 ? str.charAt(index) : -1;
-            index++;
-            return ch;
-        }
-
-        @Override
-        public void back() {
-            index--;
-        }
-
-        @Override
-        public int index() {
-            return Math.min(index, end);
-        }
-
-        @Override
-        public void setKey(Object key) {
-            this.key = key;
-        }
-
-        @Override
-        public Object getKey() {
-            return key;
-        }
-    }
-
-    public static class Model {
-        private Map<Object, Map<Object, Deque<Object>>> lines = new LinkedHashMap<>();
-        private Map<Object, State> states = new HashMap<>();
-        private Map<Object, List<Action>> actions = new HashMap<>();
-
-        public void addLine(boolean first, Object from, Object con, Object to) {
-            if (con instanceof Character)
-                con = (int) (char) con;
-            Map<Object, Deque<Object>> map = lines.get(from);
-            if (map == null)
-                lines.put(from, map = new LinkedHashMap<>());
-            Deque<Object> dq = map.get(con);
-            if (dq == null)
-                map.put(con, dq = new LinkedList<>());
-            if (first)
-                dq.offerFirst(to);
-            else
-                dq.offerLast(to);
-        }
-
-        public void addLine(Object from, Object con, Object to) {
-            addLine(false, from, con, to);
-        }
-
-        void addState(Object name, State state) {
-            states.put(name, state);
-        }
-
-        public void addAction(Object name, Action action) {
-            List<Action> actionList = actions.get(name);
-            if (actionList == null)
-                actions.put(name, actionList = new ArrayList<>());
-            actionList.add(action);
-        }
-
-        public void apply() {
-            Set<Object> nameSet = new HashSet<>();
-            Set<Object> names = new HashSet<>();
-
-            names.addAll(lines.keySet());
-            for (Map<Object, Deque<Object>> map : lines.values())
-                for (Deque<Object> dq : map.values())
-                    names.addAll(dq);
-            for (Object name : names) {
-                if (!apply(name, nameSet))
-                    throw new IllegalArgumentException("该节点在有向图中不可达：" + name);
-                nameSet.clear();
-                List<Action> actionList = actions.get(name);
-                if (actionList != null)
-                    for (Action action : actionList)
-                        states.get(name).addAction(action);
-            }
-            for (Map.Entry<Object, Map<Object, Deque<Object>>> e : lines.entrySet()) {
-                Object from = e.getKey();
-                for (Map.Entry<Object, Deque<Object>> ee : e.getValue().entrySet()) {
-                    Object con = ee.getKey();
-                    Deque<Object> dq = ee.getValue();
-                    int i = 0;
-                    State[] to = new State[dq.size()];
-                    for (Object obj : ee.getValue())
-                        to[i++] = states.get(obj);
-                    states.get(from).add(con, to);
+        private static void replaceFirst(LL1Pattern pattern, LL1Pattern replacement) {
+            List<LL1Prod> prods = pattern.prods;
+            List<LL1Prod> replaceProds = replacement.prods;
+            for (int i = 0; i < prods.size(); i++) {
+                LL1Prod prod = prods.get(i);
+                List<PatternWithAction> pwas = prod.pwas;
+                if (pwas.get(0).pattern == replacement) {
+                    List<PatternWithAction> subPwas = replaceProds.get(0).pwas;
+                    if (hasAction) {
+                        PatternWithAction last = pwas.get(pwas.size() - 1);
+                        LL1Action action = last.action;
+                        PatternWithAction subLast = subPwas.get(subPwas.size() - 1);
+                        LL1Action subAction = subLast.action;
+                        action.expr.move(subPwas.size() - 1);
+                        action.replace(subPwas.size() - 1, subAction.expr);
+                        subLast.action = pwas.size() == 1 ? action : null;
+                    }
+                    pwas.remove(0);
+                    pwas.addAll(0, subPwas);
+                    for (int j = 1; j < replaceProds.size(); j++)
+                        prods.add(mergeProd(replaceProds.get(j), prod));
                 }
             }
         }
 
-        private boolean apply(Object name, Set<Object> nameSet) {
-            State state = states.get(name);
-            if (state != null)
-                return true;
-            for (Map.Entry<Object, Map<Object, Deque<Object>>> e : lines.entrySet()) {
-                Object from = e.getKey();
-                for (Map.Entry<Object, Deque<Object>> ee : e.getValue().entrySet()) {
-                    for (Object to : ee.getValue()) {
-                        if (to.equals(name) && !nameSet.contains(from)) {
-                            nameSet.add(from);
-                            if (apply(from, nameSet)) {
-                                // State stateFrom = states.get(from);
-                                // stateFrom.add(con, sts);
-                                states.put(name, new DefaultState());
-                                return true;
+        private static LL1Prod mergeProd(LL1Prod prod1, LL1Prod prod2) {
+            List<PatternWithAction> newList = newList();
+            for (PatternWithAction pwa : prod1.pwas)
+                newList.add((PatternWithAction) pwa.clone());
+            for (PatternWithAction pwa : prod2.pwas)
+                newList.add((PatternWithAction) pwa.clone());
+            if (hasAction) {
+
+            }
+            newList.addAll(prod1.pwas);
+            newList.addAll(prod2.pwas);
+            return new LL1Prod(newList);
+        }
+
+        private static void extractCommonLeft(List<LL1Pattern> nonterms) {
+
+        }
+
+        private static void calculateFirst(LL1Pattern[] nonterms) {
+            ChangedStatus status = new ChangedStatus();
+            do {
+                status.changed = false;
+                for (LL1Pattern pattern : nonterms) {
+                    FirstTable patternFirst = pattern.first;
+                    List<LL1Prod> prods = pattern.prods;
+                    for (int i = 0; i < prods.size(); i++) {
+                        LL1Prod prod = prods.get(i);
+                        FirstTable prodFirst = prod.first;
+                        List<PatternWithAction> pwas = prod.pwas;
+                        PatternWithAction pwa = pwas.get(0);
+                        LL1Pattern first = pwa.pattern;
+                        switch (first.type) {
+                            case TERM:
+                                add(status, patternFirst.first, first);
+                                add(status, prodFirst.first, first);
+                                break;
+                            case EPSILON:
+                                addFirstEpslion(status, patternFirst);
+                                addFirstEpslion(status, prodFirst);
+                                break;
+                            case NONTERM:
+                                boolean allHasEpsilon = true;
+                                for (int j = 0; j < pwas.size(); j++) {
+                                    LL1Pattern ptn = pwas.get(j).pattern;
+                                    addAll(status, patternFirst.first, ptn.first.first);
+                                    addAll(status, prodFirst.first, ptn.first.first);
+                                    if (!hasEpsilon(ptn)) {
+                                        allHasEpsilon = false;
+                                        break;
+                                    }
+                                }
+                                if (allHasEpsilon) {
+                                    addFirstEpslion(status, patternFirst);
+                                    addFirstEpslion(status, prodFirst);
+                                }
+                                break;
+                            default:
+                                throw new UnsupportedOperationException();
+                        }
+                    }
+                }
+            } while (status.changed);
+        }
+
+        private static void calculateFollow(LL1Pattern[] nonterms) {
+            ChangedStatus status = new ChangedStatus();
+            nonterms[0].follow.followHasDoller = true;
+            do {
+                status.changed = false;
+                for (LL1Pattern pattern : nonterms) {
+                    List<LL1Prod> prods = pattern.prods;
+                    for (int i = 0; i < prods.size(); i++) {
+                        LL1Prod prod = prods.get(i);
+                        List<PatternWithAction> pwas = prod.pwas;
+                        for (int j = 0; j < pwas.size(); j++) {
+                            PatternWithAction pwa = pwas.get(j);
+                            LL1Pattern ptn = pwa.pattern;
+                            FollowTable ptnFollow = ptn.follow;
+                            if (ptn.type == LL1PatternType.NONTERM) {
+                                boolean followHasEpsilon = true;
+                                if (j != pwas.size() - 1) {
+                                    LL1Pattern followPtn = pwas.get(j + 1).pattern;
+                                    if (followPtn.type == LL1PatternType.NONTERM) {
+                                        addAll(status, ptnFollow.follow, followPtn.first.first);
+                                    } else {
+                                        add(status, ptnFollow.follow, followPtn);
+                                    }
+                                    followHasEpsilon = hasEpsilon(followPtn);
+                                }
+                                if (followHasEpsilon) {
+                                    addAll(status, ptnFollow.follow, pattern.follow.follow);
+                                    if (pattern.follow.followHasDoller)
+                                        addFollowDoller(status, ptnFollow);
+                                }
                             }
                         }
                     }
                 }
+            } while (status.changed);
+        }
+
+        private static void calculateAnalyzeTable(LL1Pattern[] nonterms, int termSize) {
+            for (LL1Pattern nonterm : nonterms) {
+                LL1Prod[] table = nonterm.analyzeTable = new LL1Prod[termSize + 1];
+                for (LL1Prod prod : nonterm.prods) {
+                    for (LL1Pattern first : prod.first.first)
+                        table[first.ordinal] = prod;
+                    if (prod.first.firstHasEpsilon) {
+                        for (LL1Pattern follow : nonterm.follow.follow) {
+                            if (table[follow.ordinal] != null)
+                                throw new IllegalArgumentException("二义文法");
+                            table[follow.ordinal] = prod;
+                        }
+                        if (nonterm.follow.followHasDoller)
+                            table[table.length - 1] = prod;
+                    }
+                }
             }
-            return false;
         }
-    }
-    interface Ftr {
-        CharFilter TextHead = CharFilter.or(CharFilter.JavaNameHead, CharFilter.Chinese);
-        CharFilter TextBody = CharFilter.or(CharFilter.JavaNameBody, CharFilter.Chinese);
-        CharFilter TextTail = CharFilter.not(TextBody);
-    }
-    public static abstract class Action {
-        public abstract void perform(State state, Context ctx);
 
-        public static Action Back = new Action() {
-            @Override
-            public void perform(State state, Context ctx) {
-                ctx.back();
+        private static boolean hasEpsilon(LL1Pattern pattern) {
+            switch (pattern.type) {
+                case TERM:
+                    return false;
+                case NONTERM:
+                    List<LL1Prod> prods = pattern.prods;
+                    for (int i = 0; i < prods.size(); i++)
+                        if (prods.get(i).pwas.get(0).pattern.type == LL1PatternType.EPSILON)
+                            return true;
+                    return false;
+                default:
+                    throw new UnsupportedOperationException();
             }
-        };
+        }
 
-        public static Action finish(final Object key) {
-            return new Action() {
-                @Override
-                public void perform(State state, Context ctx) {
-                    ctx.setKey(key);
-                    throw SuccessException.INSTANCE;
-                }
-            };
+        static class ChangedStatus {
+            public boolean changed;
+        }
+
+        private static void add(ChangedStatus status, Set<LL1Pattern> set, LL1Pattern element) {
+            if (set.add(element))
+                status.changed = true;
+        }
+
+        private static void addFirstEpslion(ChangedStatus status, FirstTable first) {
+            if (!first.firstHasEpsilon) {
+                first.firstHasEpsilon = true;
+                status.changed = true;
+            }
+        }
+
+        private static void addAll(ChangedStatus status, Set<LL1Pattern> set,
+                Collection<LL1Pattern> col) {
+            if (set.addAll(col))
+                status.changed = true;
+        }
+
+        private static void addFollowDoller(ChangedStatus status, FollowTable follow) {
+            if (!follow.followHasDoller) {
+                follow.followHasDoller = true;
+                status.changed = true;
+            }
         }
     }
-    public static class PatternContext {
-        public int state;
-        public Model model;
-        public int first;
-        public int secondLast;
-        public Object con;
-        public int last;
 
-        public PatternContext(Model model) {
-            this.model = model;
+    abstract static class LL1Expr extends BaseObject {
+        public void move(int len) {}
+
+        public void replace(int index, int newIndex, String newField) {}
+
+        public void replace(int index, LL1Function func, int argsIndex, LL1Expr replacement) {}
+
+        public abstract Object execute(Namespace ns);
+    }
+    static class Namespace {
+        public LL1Pattern nonterm;
+        public LL1Prod prod;
+        public Map<LL1Variable, Object> values = new HashMap<>();
+        public Map<String, Function<Object[], Object>> functions = new HashMap<>();
+
+        public Namespace(LL1Pattern nonterm, LL1Prod prod) {
+            this.nonterm = nonterm;
+            this.prod = prod;
         }
     }
-    public static abstract class Pattern {
-        public abstract void build(PatternContext ctx);
+    static class LL1Variable extends LL1Expr {
+        public int index;
+        public String field;
 
-        public static Pattern compile(CharSequence regex) {
-            return Regex.compile(regex);
-        }
-
-        public static Pattern single(final Object con) {
-            return new Pattern() {
-                @Override
-                public void build(PatternContext ctx) {
-                    int state = ++ctx.state;
-                    ctx.model.addLine(ctx.last, con, state);
-
-                    ctx.first = ctx.last;
-                    ctx.secondLast = ctx.last;
-                    ctx.con = con;
-                    ctx.last = state;
-                }
-
-                @Override
-                public String toString() {
-                    return con.toString();
-                }
-            };
-        }
-
-        public static Pattern link(final Object... args) {
-            return new Pattern() {
-                @Override
-                public void build(PatternContext ctx) {
-                    int first = -1;
-                    int state = ctx.last;
-                    for (Object obj : args) {
-                        if (obj instanceof Pattern) {
-                            Pattern pattern = (Pattern) obj;
-                            pattern.build(ctx);
-                            state = ctx.last;
-                            if (first == -1)
-                                first = ctx.first;
-                        } else {
-                            ctx.model.addAction(state, (Action) obj);
-                        }
-                    }
-                    ctx.first = first;
-                }
-
-                @Override
-                public String toString() {
-                    return Strings.join(args, "");
-                }
-            };
-        }
-
-        public static Pattern repeat(final Pattern pattern, final int min, final int max,
-                final boolean more) {
-            if (min < 0 || max > 0 && min > max || max == 0)
-                throw new IllegalArgumentException();
-            return new Pattern() {
-                @Override
-                public void build(PatternContext ctx) {
-                    int tmax = max, tmin = min;
-                    int first = -1;
-                    if (tmin > 1) {
-                        int n = min - 1;
-                        tmin -= n;
-                        tmax -= n;
-                        for (int i = 0; i < n; i++) {
-                            pattern.build(ctx);
-                            if (first == -1)
-                                first = ctx.first;
-                        }
-                    }
-                    if (tmax < 0) {
-                        pattern.build(ctx);
-                        int secondLast = ctx.secondLast;
-                        if (first == -1)
-                            first = ctx.first;
-                        pattern.build(ctx);
-                        ctx.model.addLine(more, ctx.secondLast, ctx.con, ctx.first);
-                        ctx.model.addLine(!more, secondLast, ctx.con, ctx.last);
-                    } else {
-                        List<Integer> secondLasts = new ArrayList<>();
-                        pattern.build(ctx);
-                        secondLasts.add(ctx.secondLast);
-                        if (first == -1)
-                            first = ctx.first;
-                        Object con = ctx.con;
-                        for (int i = 1; i < tmax; i++) {
-                            pattern.build(ctx);
-                            secondLasts.add(ctx.secondLast);
-                        }
-                        int last = ctx.last;
-                        for (int i = 0, len = secondLasts.size() - 1; i < len; i++) {
-                            int state = secondLasts.get(i);
-                            ctx.model.addLine(!more, state, con, last);
-                        }
-                    }
-                    ctx.first = first;
-                    if (tmin == 0) {
-                        int state = ++ctx.state;
-                        ctx.model.addLine(!more, first, null, state);
-                        ctx.model.addLine(!more, state, null, ctx.last);
-                        // ctx.model.addAction(state, Action.Back);
-                        // ctx.model.addAction(state, Action.Back);
-                    }
-                }
-
-                @Override
-                public String toString() {
-                    return pattern + "{" + min + "," + (max == -1 ? "" : max) + "}"
-                            + (more ? "" : "?");
-                }
-            };
-        }
-    }
-    public static class Range {
-        public int min, max;
-
-        public Range(int min, int max) {
-            this.min = min;
-            this.max = max;
+        public LL1Variable(int index, String field) {
+            this.index = index;
+            this.field = field;
         }
 
         @Override
-        public String toString() {
-            return (char) min + "-" + (char) max;
+        public Object execute(Namespace ns) {
+            return ns.values.get(this);
         }
-    }
-    public static class CharacterSet extends CharFilter {
-        private MyStringBuilder chars = new MyStringBuilder();
-        private List<Range> ranges = new ArrayList<>();
-        public boolean[] arr;
-        public Set<Integer> set;
-        public List<CharFilter> cfs;
 
         @Override
-        public boolean accept(int ch) {
-            return ch > 0 && ch < 128 && arr != null && arr[ch] || set != null && set.contains(ch)
-                    || cfs != null && accepts(cfs, ch);
+        public void move(int len) {
+            index += len;
         }
 
-        private static boolean accepts(List<CharFilter> cfs, int ch) {
-            for (int i = 0, len = cfs.size(); i < len; i++)
-                if (cfs.get(i).accept(ch))
-                    return true;
-            return false;
-        }
-
-        private boolean[] getArr() {
-            if (arr == null)
-                arr = new boolean[128];
-            return arr;
-        }
-
-        private Set<Integer> getSet() {
-            if (set == null)
-                set = new HashSet<>();
-            return set;
-        }
-
-        private List<CharFilter> getCfs() {
-            if (cfs == null)
-                cfs = new ArrayList<>();
-            return cfs;
-        }
-
-        public void put(int ch) {
-            if (ch >= 0 && ch < 128) {
-                getArr()[ch] = true;
-            } else {
-                getSet().add(ch);
-            }
-            chars.append((char) ch);
-        }
-
-        public void put(String chars) {
-            for (int i = 0; i < chars.length(); i++)
-                put(chars.charAt(i));
-        }
-
-        public void put(int min, int max) {
-            if (min > max)
-                throw new IllegalArgumentException();
-            if (min >= 0 && max < 128) {
-                for (int i = min; i < max; i++) {
-                    getArr()[i] = true;
-                    chars.append((char) i);
-                }
-            } else {
-                getCfs().add(CharFilter.range(min, max));
-                ranges.add(new Range(min, max));
+        @Override
+        public void replace(int index, int newIndex, String newField) {
+            if (this.index == index) {
+                this.index = newIndex;
+                this.field = newField;
             }
         }
 
-        private int hashCode = -1;
+        @Override
+        public void replace(int index, LL1Function func, int argsIndex, LL1Expr replacement) {
+            if (this.index == index)
+                func.args[argsIndex] = replacement;
+        }
 
         @Override
         public int hashCode() {
-            if (hashCode == -1)
-                hashCode = Arrays.hashCode(arr) ^ (set == null ? 0 : set.hashCode())
-                        ^ (cfs == null ? 0 : cfs.hashCode());
-            return hashCode;
+            return index ^ field.hashCode();
         }
 
         @Override
         public boolean equals(Object obj) {
-            CharacterSet cs;
-            return this == obj || obj instanceof CharacterSet
-                    && Arrays.equals(arr, (cs = (CharacterSet) obj).arr)
-                    && (set == cs.set || set != null && set.equals(cs.set))
-                    && (cfs == cs.cfs || cfs != null && cfs.equals(cs.cfs));
-        }
-
-        @Override
-        public String toString() {
-            return new MyStringBuilder().append('[').append(chars).appends(ranges, "").append(']')
-                    .toString();
+            LL1Variable that = (LL1Variable) obj;
+            return index == that.index && field.equals(that.field);
         }
     }
 
-    static class Regex {
-        static enum Key {
-            CHAR, EOF, LSB, RSB, LMB, RMB, LBB, RBB, ADD, SUB, COMMA, OR, XOR, QUE, DOT, ASTERISK, CDATA, END, NOT
+    static class LL1Const extends LL1Expr {
+        public Object value;
+
+        public LL1Const(Object value) {
+            this.value = value;
         }
 
-        static Model CharModel = new Model();
-        static {
-            CharModel.addLine(0, '\\', 1);
-            CharModel.addLine(0, CharFilter.Any, 2);
-            CharModel.addLine(1, 'u', 3);
-            CharModel.addLine(1, CharFilter.OctalNumber, 4);
-            CharModel.addLine(1, CharFilter.OctalNumber, 2);
-            CharModel.addLine(1, CharFilter.Any, 2);
-            CharModel.addLine(3, CharFilter.HexNumber, 4);
-            CharModel.addLine(4, CharFilter.HexNumber, 5);
-            CharModel.addLine(5, CharFilter.HexNumber, 6);
-            CharModel.addLine(6, CharFilter.HexNumber, 2);
-            CharModel.addLine(4, CharFilter.OctalNumber, 7);
-            CharModel.addLine(4, CharFilter.OctalNumber, 2);
-            CharModel.addLine(7, CharFilter.OctalNumber, 2);
-
-            CharModel.addAction(2, Action.finish(Key.CHAR));
+        @Override
+        public Object execute(Namespace ns) {
+            return value;
         }
-        static Model CDATAModel = new Model();// <![CDATA[常量字符串，无需转义]]>
-        static {
-            CDATAModel.addLine(0, '<', 1);
-            CDATAModel.addLine(1, '!', 2);
-            CDATAModel.addLine(2, '[', 3);
-            CDATAModel.addLine(3, 'C', 4);
-            CDATAModel.addLine(4, 'D', 5);
-            CDATAModel.addLine(5, 'A', 6);
-            CDATAModel.addLine(6, 'T', 7);
-            CDATAModel.addLine(7, 'A', 8);
-            CDATAModel.addLine(8, '[', 9);
-            CDATAModel.addLine(9, ']', 10);
-            CDATAModel.addLine(9, CharFilter.Any, 9);
-            CDATAModel.addLine(10, ']', 11);
-            CDATAModel.addLine(10, CharFilter.Any, 9);
-            CDATAModel.addLine(11, '>', 12);
-            CDATAModel.addLine(11, CharFilter.Any, 9);
+    }
 
-            CDATAModel.addAction(12, Action.finish(Key.CDATA));
-        }
-        static Analyzer<Key> RegexAnalyzer = new Analyzer<>();
+    static class LL1Function extends LL1Expr {
+        public String name;
+        public LL1Expr[] args;
 
-        static {
-            RegexAnalyzer.setModel(CharModel);
-            RegexAnalyzer.setModel(CDATAModel);
-            RegexAnalyzer.setEOF(Key.EOF);
-            RegexAnalyzer.setSymbol("(", Key.LSB);
-            RegexAnalyzer.setSymbol(")", Key.RSB);
-            RegexAnalyzer.setSymbol("[", Key.LMB);
-            RegexAnalyzer.setSymbol("]", Key.RMB);
-            RegexAnalyzer.setSymbol("{", Key.LBB);
-            RegexAnalyzer.setSymbol("}", Key.RBB);
-            RegexAnalyzer.setSymbol("+", Key.ADD);
-            RegexAnalyzer.setSymbol("-", Key.SUB);
-            RegexAnalyzer.setSymbol(",", Key.COMMA);
-            RegexAnalyzer.setSymbol("|", Key.OR);// TODO
-            RegexAnalyzer.setSymbol("^", Key.XOR);// TODO
-            RegexAnalyzer.setSymbol("?", Key.QUE);
-            RegexAnalyzer.setSymbol(".", Key.DOT);
-            RegexAnalyzer.setSymbol("*", Key.ASTERISK);
-            RegexAnalyzer.setSymbol("$", Key.END);
-            RegexAnalyzer.setSymbol("!", Key.NOT);// TODO
+        public LL1Function(String name, LL1Expr[] args) {
+            this.name = name;
+            this.args = args;
         }
 
-        public static Pattern compile(CharSequence regex) {
-            Source<Key> src = RegexAnalyzer.analyze(regex);
-            List<Object> patterns = new ArrayList<>();
-            boolean lastRange = false;
-            int min = -1, max = -1;
-            boolean more = true;
-            L0: for (Key key = src.next();;) {
-                switch (key) {
-                    case CHAR:
-                    case EOF:
-                    case LMB:
-                    case DOT:
-                    case CDATA:
-                        if (lastRange) {
-                            int index = patterns.size() - 1;
-                            patterns.set(index,
-                                    Pattern.repeat((Pattern) patterns.get(index), min, max, more));
-                            lastRange = false;
-                            min = max = -1;
-                            more = true;
-                        }
-                        break;
-                    case LBB:
-                    case ADD:
-                    case ASTERISK:
-                        lastRange = true;
-                        break;
-                    default:
-                        break;
-                }
-                switch (key) {
-                    case CHAR:
-                        patterns.add(Pattern.single(unEscape(src.getValue())));
-                        break;
-                    case EOF:
-                        break L0;
-                    case LMB:
-                        CharacterSet set = null;
-                        CharacterSet notSet = null;
-                        boolean lastSub = true;
-                        int last = -1;
-                        boolean isNotSet = false;
-                        L1: while (true) {
-                            key = src.next();
-                            switch (key) {
-                                case RMB:
-                                    break L1;
-                                case XOR:
-                                    if (notSet == null)
-                                        notSet = new CharacterSet();
-                                    isNotSet = true;
-                                    break;
-                                case CHAR:
-                                    if (!isNotSet && set == null) {
-                                        set = new CharacterSet();
-                                    }
-                                    char ch = unEscape(src.getValue());
-                                    if (last == -1)
-                                        last = ch;
-                                    else {
-                                        CharacterSet s = isNotSet ? notSet : set;
-                                        if (lastSub) {
-                                            s.put(last, ch);
-                                            last = -1;
-                                        } else {
-                                            s.put(last);
-                                            last = ch;
-                                        }
-                                        isNotSet = false;
-                                    }
-                                    lastSub = false;
-                                    break;
-                                case END:
-                                    (isNotSet ? notSet : set).put(-1);
-                                    isNotSet = false;
-                                    break;
-                                case SUB:
-                                    if (lastSub)
-                                        throw new IllegalArgumentException();
-                                    lastSub = true;
-                                    break;
-                                default:
-                                    throw new IllegalArgumentException();
-                            }
-                        }
-                        if (last != -1)
-                            (isNotSet ? notSet : set).put(last);
-                        CharFilter cf;
-                        if (set == null) {
-                            if (notSet == null) {
-                                throw new IllegalArgumentException();
-                            } else {
-                                cf = CharFilter.not(notSet);
-                            }
-                        } else {
-                            if (notSet == null) {
-                                cf = set;
-                            } else {
-                                cf = CharFilter.or(set, CharFilter.not(notSet));
-                            }
-                        }
-                        patterns.add(Pattern.single(cf));
-                        break;
-                    case DOT:
-                        patterns.add(Pattern.single(CharFilter.Any));
-                        break;
-                    case END:
-                        patterns.add(Pattern.single(-1));
-                        break;
-                    case CDATA:
-                        CharSequence value = src.getValue();
-                        List<Pattern> list = new ArrayList<>();
-                        for (int i = "<![CDATA[".length(), len =
-                                value.length() - "]]>".length(); i < len; i++)
-                            list.add(Pattern.single(value.charAt(i)));
-                        patterns.add(Pattern.link(list.toArray()));
-                        break;
-                    case LBB:
-                        MyStringBuilder sb = new MyStringBuilder();
-                        L2: while (true) {
-                            key = src.next();
-                            switch (key) {
-                                case RBB:
-                                    break L2;
-                                case CHAR:
-                                    sb.append(src.getValue());
-                                    break;
-                                case COMMA:
-                                    min = Numbers.parseInt(sb, null, 10, -1, -1);
-                                    sb.clear();
-                                    break;
-                                default:
-                                    throw new IllegalArgumentException();
-                            }
-                        }
-                        max = Numbers.parseInt(sb, null, 10, -1, -1);
-                        break;
-                    case QUE:
-                        if (lastRange)
-                            more = false;
-                        else {
-                            min = 0;
-                            max = 1;
-                            lastRange = true;
-                        }
-                        break;
-                    case ADD:
-                        min = 1;
-                        break;
-                    case ASTERISK:
-                        min = 0;
-                        break;
-                    default:
-                        throw new IllegalArgumentException();
-                }
-                key = src.next();
+        @Override
+        public Object execute(Namespace ns) {
+            Object[] a = new Object[args.length];
+            for (int i = 0; i < args.length; i++)
+                a[i] = args[i].execute(ns);
+            return ns.functions.get(name).apply(a);
+        }
+
+        @Override
+        public void move(int len) {
+            for (LL1Expr expr : args)
+                expr.move(len);
+        }
+
+        @Override
+        public void replace(int index, int newIndex, String newField) {
+            for (LL1Expr expr : args)
+                expr.replace(index, newIndex, newField);
+        }
+
+        @Override
+        public void replace(int index, LL1Function func, int argsIndex, LL1Expr replacement) {
+            for (int i = 0; i < args.length; i++) {
+                args[i].replace(index, this, i, replacement);
             }
-            return Pattern.link(patterns.toArray());
         }
 
-        private static char unEscape(CharSequence cs) {
-            char c = cs.charAt(0);
-            if (c == '\\') {
-                c = cs.charAt(1);
-                switch (c) {
-                    case 'r':
-                        return '\r';
-                    case 'n':
-                        return '\n';
-                    case 'f':
-                        return '\f';
-                    case 't':
-                        return '\t';
-                    case 'b':
-                        return '\b';
-                    case 'u':
-                        return (char) Numbers.parseInt(cs, null, 16, 1, -1);
-                    default:
-                        if (CharFilter.OctalNumber.accept(c))
-                            return (char) Numbers.parseInt(cs, null, 8, 1, -1);
+        @Override
+        public Object clone() {
+            LL1Function obj = (LL1Function) super.clone();
+            LL1Expr[] newArgs = obj.args = new LL1Expr[args.length];
+            for (int i = 0; i < args.length; i++)
+                newArgs[i] = (LL1Expr) args[i].clone();
+            return obj;
+        }
+    }
+
+    static class LL1Action extends BaseObject {
+        public LL1Variable dst;
+        public LL1Expr expr;
+
+        public LL1Action(LL1Variable dst, LL1Expr expr) {
+            this.dst = dst;
+            this.expr = expr;
+        }
+
+        public void replace(int index, LL1Expr replacement) {
+            if (expr instanceof LL1Variable) {
+                LL1Variable v = (LL1Variable) expr;
+                if (v.index == index)
+                    expr = replacement;
+            } else if (expr instanceof LL1Function) {
+                expr.replace(index, null, 0, replacement);
+            }
+        }
+    }
+
+    static class PatternWithAction extends BaseObject {
+        public LL1Pattern pattern;
+        public LL1Action action;
+        public LL1Variable[] dsts;
+        public Function<MyLex, Object>[] getters;// for TERM
+        public LL1Variable[] srcs;// for NONTERM
+
+        public PatternWithAction(LL1Pattern pattern, LL1Action action) {
+            this.pattern = pattern;
+            this.action = action;
+        }
+
+        @Override
+        public Object clone() {
+            PatternWithAction obj = (PatternWithAction) super.clone();
+            obj.action = (LL1Action) action.clone();
+            return obj;
+        }
+    }
+
+    static class FirstTable extends BaseObject {
+        public Set<LL1Pattern> first = new HashSet<>();
+        public boolean firstHasEpsilon;
+    }
+
+    static class FollowTable extends BaseObject {
+        public Set<LL1Pattern> follow = new HashSet<>();
+        public boolean followHasDoller;
+    }
+
+    static enum LL1PatternType {
+        TERM, NONTERM, EPSILON
+    }
+
+    static class LL1Prod extends BaseObject {
+        public List<PatternWithAction> pwas;
+        public FirstTable first;
+
+        public LL1Prod(List<PatternWithAction> pwas) {
+            this.pwas = pwas;
+            this.first = new FirstTable();
+        }
+    }
+
+    static class LL1Pattern extends BaseObject {
+        public LL1PatternType type;
+        public String name;// for ALL
+        public int ordinal;// for TERM
+        public String friendlyName;// for TERM
+        public String regex;// for TERM
+        public List<LL1Prod> prods;// for NONTERM
+        public FirstTable first;// for NONTERM
+        public FollowTable follow;// for NONTERM
+        public LL1Prod[] analyzeTable;// for NONTERM
+
+        public LL1Pattern(LL1PatternType type, String name, int ordinal, String friendlyName,
+                String regex, List<LL1Prod> prods, FirstTable first, FollowTable follow) {
+            this.type = type;
+            this.name = name;
+            this.ordinal = ordinal;
+            this.friendlyName = friendlyName;
+            this.regex = regex;
+            this.prods = prods;
+            this.first = first;
+            this.follow = follow;
+        }
+
+        public static LL1Pattern term(String name, int ordinal, String friendlyName, String regex) {
+            return new LL1Pattern(LL1PatternType.TERM, name, ordinal, friendlyName, regex, null,
+                    null, null);
+        }
+
+        public static final LL1Pattern EPSILON =
+                new LL1Pattern(LL1PatternType.EPSILON, "ε", 0, null, null, null, null, null);
+
+        public static LL1Pattern nonterm(String name, List<LL1Prod> prods) {
+            return new LL1Pattern(LL1PatternType.NONTERM, name, 0, null, null, prods,
+                    new FirstTable(), new FollowTable());
+        }
+    }
+
+    abstract static class BaseObject implements Cloneable {
+        @Override
+        public String toString() {
+            return ToStringSupport.toString(this);
+        }
+
+        @Override
+        public Object clone() {
+            try {
+                return super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new Error(e);
+            }
+        }
+    }
+
+    static class ToStringSupport {
+        private static Map<Class<?>, Method> appenders = new HashMap<>();
+        static {
+            try {
+                Method[] methods = ToStringSupport.class.getMethods();
+                for (Method method : methods) {
+                    if (method.getName().equals("appendTo")) {
+                        Class<?>[] types = method.getParameterTypes();
+                        if (types.length == 2 && types[1] == MyStringBuilder.class)
+                            appenders.put(types[0], method);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        public static MyStringBuilder appendAny(Object obj, MyStringBuilder sb) {
+            Method method = appenders.get(obj.getClass());
+            if (method != null)
+                try {
+                    return (MyStringBuilder) method.invoke(null, obj, sb);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            JSON.Serializers.forAny.serialize(obj, sb);
+            return sb;
+        }
+
+        public static String toString(Object obj) {
+            return appendAny(obj, new MyStringBuilder()).toString();
+        }
+
+        public static MyStringBuilder appendTo(LL1Variable v, MyStringBuilder sb,
+                LL1Pattern nonterm, LL1Prod prod) {
+            if (v.index == -1)
+                sb.append(nonterm == null ? "NONTERM" : nonterm.name);
+            else
+                sb.append(prod == null ? "PROD" : prod.pwas.get(v.index).pattern.name).append('[')
+                        .append(v.index).append(']');
+            return sb.append('.').append(v.field);
+        }
+
+        public static MyStringBuilder appendTo(LL1Variable v, MyStringBuilder sb) {
+            return appendTo(v, sb, null, null);
+        }
+
+        public static MyStringBuilder appendTo(LL1Const v, MyStringBuilder sb) {
+            return sb.append(v.value);
+        }
+
+        public static MyStringBuilder appendTo(LL1Function v, MyStringBuilder sb,
+                LL1Pattern nonterm, LL1Prod prod) {
+            return sb.append(v.name).append("(")
+                    .<LL1Expr>appends(v.args, (a, s) -> appendExpr(a, s, nonterm, prod), ",")
+                    .append(")");
+        }
+
+        public static MyStringBuilder appendTo(LL1Function v, MyStringBuilder sb) {
+            return appendTo(v, sb, null, null);
+        }
+
+        public static MyStringBuilder appendExpr(LL1Expr v, MyStringBuilder sb, LL1Pattern nonterm,
+                LL1Prod prod) {
+            if (v instanceof LL1Variable)
+                return appendTo((LL1Variable) v, sb, nonterm, prod);
+            else if (v instanceof LL1Const)
+                return appendTo((LL1Const) v, sb);
+            else if (v instanceof LL1Function)
+                return appendTo((LL1Function) v, sb, nonterm, prod);
+            else
+                throw new UnsupportedOperationException();
+        }
+
+        public static MyStringBuilder appendTo(LL1Action v, MyStringBuilder sb, LL1Pattern nonterm,
+                LL1Prod prod) {
+            appendTo(v.dst, sb, nonterm, prod).append("=");
+            return appendExpr(v.expr, sb, nonterm, prod);
+        }
+
+        public static MyStringBuilder appendTo(LL1Action v, MyStringBuilder sb) {
+            return appendTo(v, sb, null, null);
+        }
+
+        public static MyStringBuilder appendTo(PatternWithAction v, MyStringBuilder sb,
+                LL1Pattern nonterm, LL1Prod prod) {
+            sb.append(v.pattern.name);
+            if (v.action != null)
+                sb.append("  {").append(v.action, (a, s) -> appendTo(a, s, nonterm, prod))
+                        .append("}");
+            return sb;
+        }
+
+        public static MyStringBuilder appendTo(PatternWithAction v, MyStringBuilder sb) {
+            return appendTo(v, sb, null, null);
+        }
+
+        public static MyStringBuilder appendTo(FirstTable v, MyStringBuilder sb) {
+            sb.append("first=[").appends(v.first, (p, s) -> s.append(p.name), ",");
+            if (v.firstHasEpsilon) {
+                if (!v.first.isEmpty())
+                    sb.append(",");
+                sb.append(LL1Pattern.EPSILON);
+            }
+            return sb.append("]");
+        }
+
+        public static MyStringBuilder appendTo(FollowTable v, MyStringBuilder sb) {
+            sb.append("follow=[").appends(v.follow, (p, s) -> s.append(p.name), ",");
+            if (v.followHasDoller) {
+                if (!v.follow.isEmpty())
+                    sb.append(",");
+                sb.append("$");
+            }
+            return sb.append("]");
+        }
+
+        public static MyStringBuilder appendTo(LL1Pattern v, MyStringBuilder sb) {
+            switch (v.type) {
+                case TERM:
+                case EPSILON:
+                    return sb.append(v.name);
+                case NONTERM:
+                    for (int i = 0; i < v.prods.size(); i++) {
+                        if (i == 0)
+                            sb.append(v.name).append(" --> ");
+                        else
+                            sb.append(' ', v.name.length()).append("     ");
+                        LL1Prod prod = v.prods.get(i);
+                        sb.appends(prod.pwas, (p, s) -> appendTo(p, s, v, prod), " ").append("    ")
+                                .append(prod.first, ToStringSupport::appendTo).append('\n');
+                    }
+                    return sb.append(' ', v.name.length()).append("     ")
+                            .append(v.first, ToStringSupport::appendTo).append(",")
+                            .append(v.follow, ToStringSupport::appendTo);
+                default:
+                    throw new UnsupportedOperationException();
+            }
+        }
+
+        public static MyStringBuilder appendTo(LL1Prod v, MyStringBuilder sb) {
+            return sb.appends(v.pwas, (p, s) -> s.append(p.pattern.name), " ");
+        }
+    }
+
+    static class LL1PatternBuildHelper {
+        private int termOrdinal;
+        private Map<String, LL1Pattern> patterns = new LinkedHashMap<>();
+        private Map<String, LL1Pattern> nonterms = new LinkedHashMap<>();
+
+        public LL1Variable V(int index, String field) {
+            return new LL1Variable(index, field);
+        }
+
+        public LL1Function F(String name, LL1Expr... args) {
+            return new LL1Function(name, args);
+        }
+
+        public LL1Const C(Object value) {
+            return new LL1Const(value);
+        }
+
+        public LL1Action A(LL1Variable dst, LL1Expr expr) {
+            return new LL1Action(dst, expr);
+        }
+
+        public void term(String name, String friendlyName, String regex) {
+            patterns.put(name, LL1Pattern.term(name, termOrdinal++, friendlyName, regex));
+        }
+
+        private LL1Pattern getPattern(String name) {
+            LL1Pattern pattern = patterns.get(name);
+            if (pattern == null) {
+                nonterms.put(name, pattern = LL1Pattern.nonterm(name, new ArrayList<>()));
+                patterns.put(name, pattern);
+            }
+            return pattern;
+        }
+
+        public void nonterm(String name, Object... exprs) {
+            LL1Pattern pattern = getPattern(name);
+            if (pattern.type != LL1PatternType.NONTERM)
+                throw new IllegalArgumentException();
+            List<PatternWithAction> pwas = new ArrayList<>();
+            for (int i = 0; i < exprs.length;) {
+                Object expr = exprs[i++];
+                LL1Pattern ptn =
+                        expr.equals("EPSILON") ? LL1Pattern.EPSILON : getPattern((String) expr);
+                LL1Action action = null;
+                if (i < exprs.length && exprs[i] instanceof LL1Action)
+                    action = (LL1Action) exprs[i++];
+                pwas.add(new PatternWithAction(ptn, action));
+            }
+            pattern.prods.add(new LL1Prod(pwas));
+        }
+
+        public List<LL1Pattern> build1() {
+            term("+", "ADD", "\\+#{finish(ADD)}");
+            term("-", "SUB", "\\-#{finish(SUB)}");
+            term("(", "LSB", "\\(#{finish(LSB)}");
+            term(")", "RSB", "\\)#{finish(RSB)}");
+            term("id", "ID", "[a-zA-Z_][a-zA-Z0-9_]*#{finish(ID)}");
+            term("num", "NUM", "-?[0-9]+(\\.[0-9]+)?#{finish(NUM)}");
+
+            nonterm("E", "E", "+", "T",
+                    A(V(-1, "nptr"), F("mknode", C('+'), V(0, "nptr"), V(2, "nptr"))));
+            nonterm("E", "E", "-", "T",
+                    A(V(-1, "nptr"), F("mknode", C('-'), V(0, "nptr"), V(2, "nptr"))));
+            nonterm("E", "T", A(V(-1, "nptr"), V(0, "nptr")));
+            nonterm("T", "(", "E", ")", A(V(-1, "nptr"), V(1, "nptr")));
+            nonterm("T", "id", A(V(-1, "nptr"), F("mkleaf", C("id"), V(0, "entry"))));
+            nonterm("T", "num", A(V(-1, "nptr"), F("mkleaf", C("num"), V(0, "val"))));
+            return new ArrayList<>(nonterms.values());
+        }
+
+        public List<LL1Pattern> build2() {
+            term("+", "ADD", "\\+#{finish(ADD)}");
+            term("(", "LSB", "\\(#{finish(LSB)}");
+            term(")", "RSB", "\\)#{finish(RSB)}");
+            term("id", "ID", "[a-zA-Z_][a-zA-Z0-9_]*#{finish(ID)}");
+            term("num", "NUM", "-?[0-9]+(\\.[0-9]+)?#{finish(NUM)}");
+
+            nonterm("E", "E", "+", "num",
+                    A(V(-1, "nptr"), F("mknode", C('+'), V(0, "nptr"), V(2, "nptr"))));
+            nonterm("E", "num", A(V(-1, "nptr"), F("mkleaf", C("num"), V(0, "val"))));
+            nonterm("E", "T", A(V(-1, "nptr"), F("mknode", C("simple"), V(0, "nptr"))));
+            nonterm("T", "(", "id", ")", A(V(-1, "nptr"), F("mkleaf", C("id"), V(1, "val"))));
+            return new ArrayList<>(nonterms.values());
+        }
+
+        public List<LL1Pattern> build3() {
+            term("+", "ADD", "\\+#{finish(ADD)}");
+            term("*", "MUL", "\\*#{finish(MUL)}");
+            term("(", "LSB", "\\(#{finish(LSB)}");
+            term(")", "RSB", "\\)#{finish(RSB)}");
+            term("id", "ID", "[a-zA-Z_][a-zA-Z0-9_]*#{finish(ID)}");
+
+            nonterm("E", "T", "E1");
+            nonterm("E1", "+", "T", "E1");
+            nonterm("E1", "EPSILON");
+            nonterm("T", "F", "T1");
+            nonterm("T1", "*", "F", "T1");
+            nonterm("T1", "EPSILON");
+            nonterm("F", "(", "E", ")");
+            nonterm("F", "id");
+            return new ArrayList<>(nonterms.values());
+        }
+
+        public List<LL1Pattern> build4() {
+            term("a", "A", "\\a#{finish(A)}");
+            term("b", "B", "\\b#{finish(B)}");
+            term("e", "E", "\\e#{finish(E)}");
+            term("i", "I", "\\i#{finish(I)}");
+            term("t", "T", "\\t#{finish(T)}");
+
+            nonterm("S", "i", "e", "t", "S", "S1");
+            nonterm("S", "a");
+            nonterm("S1", "e", "S");
+            nonterm("S1", "EPSILON");
+            nonterm("E", "b");
+            return new ArrayList<>(nonterms.values());
+        }
+
+        public List<LL1Pattern> build() {
+            term("+", "ADD", "\\+#{finish(ADD)}");
+            term("(", "LSB", "\\(#{finish(LSB)}");
+            term(")", "RSB", "\\)#{finish(RSB)}");
+            term("id", "ID", "[a-zA-Z_][a-zA-Z0-9_]*#{finish(ID)}");
+            term("num", "NUM", "-?[0-9]+(\\.[0-9]+)?#{finish(NUM)}");
+
+            nonterm("E", "num", A(V(-1, "nptr"), F("mkleaf", C("num"), V(0, "val"))));
+            return new ArrayList<>(nonterms.values());
+        }
+    }
+    static class MyLex extends Lex.StringLex<LL1Pattern> {
+        public MyLex(DFAState start) {
+            super(start);
+        }
+
+        static class MyBuilder extends Lex.Builder<MyLex> {
+            public DFAState build(LL1Pattern[] terms, Map<String, String> patternMap,
+                    List<String> extraPatterns) {
+                initNFA();
+
+                defineActionTemplate("finish", (lex, a) -> lex.finish((LL1Pattern) a[0]));
+                defineActionTemplate("rollback", (lex, a) -> lex.rollback());
+
+                for (LL1Pattern term : terms) {
+                    defineVariable(term.friendlyName, term);
+                }
+
+                for (Map.Entry<String, String> e : patternMap.entrySet()) {
+                    definePattern(e.getKey(), e.getValue());
+                }
+
+                for (LL1Pattern term : terms) {
+                    addPattern("START", term.regex);
+                }
+
+                for (String extraPattern : extraPatterns) {
+                    addPattern("START", extraPattern);
+                }
+
+                return buildDFA("START");
+            }
+        }
+    }
+    static class DebugUtils {
+        public static void printAnalyzeTable(LL1Pattern[] nonterms, LL1Pattern[] terms) {
+            LL1Prod[][] table = new LL1Prod[nonterms.length][];
+            for (int i = 0; i < table.length; i++)
+                table[i] = nonterms[i].analyzeTable;
+            String[] rows = Arrays.stream(nonterms).map(p -> p.name).toArray(String[]::new);
+            String[] columns = Arrays.stream(terms).map(p -> p.name).toArray(String[]::new);
+            printTable(table, rows, columns, o -> o == null ? "" : o.toString());
+        }
+
+        public static <T> void printTable(T[][] table, String[] rows, String[] columns,
+                Function<T, String> toStringFunc) {
+            String[][] arr = new String[rows.length + 1][];
+            for (int i = 0; i < arr.length; i++)
+                arr[i] = new String[columns.length + 1];
+            arr[0][0] = "";
+            for (int i = 0; i < rows.length; i++)
+                arr[i + 1][0] = rows[i];
+            for (int j = 0; j < columns.length; j++)
+                arr[0][j + 1] = columns[j];
+            for (int i = 0; i < rows.length; i++)
+                for (int j = 0; j < columns.length; j++)
+                    arr[i + 1][j + 1] = toStringFunc.apply(table[i][j]);
+            int[] maxLengths = new int[columns.length + 1];
+            for (int i = 0; i <= rows.length; i++)
+                for (int j = 0; j <= columns.length; j++)
+                    maxLengths[j] = Math.max(maxLengths[j], arr[i][j].length());
+            StringBuilder formatBuffer = new StringBuilder();
+            for (int i = 0; i < maxLengths.length; i++)
+                formatBuffer.append("%").append(maxLengths[i] + 2).append("s|");
+            String format = formatBuffer.toString();
+            StringBuilder output = new StringBuilder();
+            for (int i = 0; i <= rows.length; i++)
+                output.append(String.format(format, (Object[]) arr[i])).append("\n");
+            System.out.println(output);
+        }
+
+        public static void match(LL1Pattern start, MyLex lex) {
+            Stack<LL1Pattern> stack = new Stack<>();
+            stack.push(start);
+            while (!stack.isEmpty()) {
+                LL1Pattern peek = stack.peek();
+                if (peek.type == LL1PatternType.TERM) {
+                    if (lex.key != peek)
+                        throw lex.newError();
+                    stack.pop();
+                    lex.next();
+                } else {
+                    LL1Prod prod = peek.analyzeTable[lex.key.ordinal];
+                    if (prod == null)
+                        throw lex.newError();
+                    stack.pop();
+                    if (!prod.first.firstHasEpsilon) {
+                        List<PatternWithAction> pwas = prod.pwas;
+                        for (int i = pwas.size() - 1; i >= 0; i--) {
+                            stack.push(pwas.get(i).pattern);
+                        }
+                    }
+                    System.out.println(prod);
                 }
             }
-            return c;
         }
+
+        public static void matchTest() {
+            LL1PatternBuildHelper builder = new LL1PatternBuildHelper();
+            List<LL1Pattern> nontermList = builder.build3();
+            List<LL1Pattern> termList = builder.patterns.values().stream()
+                    .filter(p -> p.type == LL1PatternType.TERM).collect(Collectors.toList());
+
+            LL1Pattern[] nonterms = LL1Converter.process(nontermList, termList);
+            Arrays.stream(nonterms).forEach(System.out::println);
+            System.out.println();
+
+            termList.add(LL1Pattern.term("$", termList.size(), "EOF", "[$]#{finish(EOF)}"));
+            LL1Pattern[] terms = termList.toArray(new LL1Pattern[termList.size()]);
+
+            DebugUtils.printAnalyzeTable(nonterms, terms);
+
+            Map<String, String> patternMap = new HashMap<String, String>();
+            List<String> extraPatterns = new ArrayList<>();
+
+            extraPatterns.add("[\r\n\t\b\f ]+#{finish(null)}");
+
+            Lex.DFAState start = new MyLex.MyBuilder().build(terms, patternMap, extraPatterns);
+            MyLex lex = new MyLex(start);
+
+            lex.resetAndNext("a+a* b(b+r)+a");
+
+            match(nonterms[0], lex);
+        }
+
+        public static void eval(LL1Pattern start, MyLex lex) {
+            Stack<Object> stack = new Stack<>();
+            Stack<Namespace> nsStack = new Stack<>();
+            stack.push(start);
+            while (!stack.isEmpty()) {
+                Object pattenrOrAction = stack.peek();
+                if (pattenrOrAction == null) {
+                    stack.pop();
+                    // Namespace ns1 = nsStack.pop();
+                    // Namespace ns2 = nsStack.peek();
+                    // ns2.values.put(key, value);
+                    // System.out.println(nsStack.pop());
+                } else if (pattenrOrAction instanceof LL1Pattern) {
+                    LL1Pattern peekPattern = (LL1Pattern) pattenrOrAction;
+                    if (peekPattern.type == LL1PatternType.TERM) {
+                        if (lex.key != peekPattern)
+                            throw lex.newError();
+                        stack.pop();
+                        lex.next();
+                    } else if (peekPattern.type == LL1PatternType.NONTERM) {
+                        LL1Prod prod = peekPattern.analyzeTable[lex.key.ordinal];
+                        if (prod == null)
+                            throw lex.newError();
+                        stack.pop();
+                        stack.push(null);
+                        nsStack.push(new Namespace(peekPattern, prod));
+                        List<PatternWithAction> pwas = prod.pwas;
+                        for (int i = pwas.size() - 1; i >= 0; i--) {
+                            PatternWithAction pwa = pwas.get(i);
+                            if (pwa.action != null)
+                                stack.push(pwa.action);
+                            stack.push(pwa.pattern);
+                        }
+                    } else {
+                        stack.pop();
+                    }
+                } else {
+                    LL1Action action = (LL1Action) pattenrOrAction;
+                    stack.pop();
+                    Namespace ns = nsStack.peek();
+                    System.out.println(ns.prod);
+                    System.out.println(ToStringSupport.appendTo(action, new MyStringBuilder(),
+                            ns.nonterm, ns.prod));
+                    System.out.println();
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        // LL1Converter.removeLeftRecursion(nontermList);
+        // nontermList.forEach(System.out::println);
+        // System.out.println();
+
+        // LL1Converter.replaceFirst(nontermList.get(0), nontermList.get(1));
+        // nontermList.forEach(System.out::println);
+        // System.out.println();
+
+
+        LL1PatternBuildHelper builder = new LL1PatternBuildHelper();
+        List<LL1Pattern> nontermList = builder.build1();
+        nontermList.forEach(System.out::println);
+        System.out.println();
+        List<LL1Pattern> termList = builder.patterns.values().stream()
+                .filter(p -> p.type == LL1PatternType.TERM).collect(Collectors.toList());
+
+        LL1Pattern[] nonterms = LL1Converter.process(nontermList, termList);
+        Arrays.stream(nonterms).forEach(System.out::println);
+        System.out.println();
+
+        termList.add(LL1Pattern.term("$", termList.size(), "EOF", "[$]#{finish(EOF)}"));
+        LL1Pattern[] terms = termList.toArray(new LL1Pattern[termList.size()]);
+
+        DebugUtils.printAnalyzeTable(nonterms, terms);
+
+        Map<String, String> patternMap = new HashMap<String, String>();
+        List<String> extraPatterns = new ArrayList<>();
+
+        extraPatterns.add("[\r\n\t\b\f ]+#{finish(null)}");
+
+        Lex.DFAState start = new MyLex.MyBuilder().build(terms, patternMap, extraPatterns);
+        MyLex lex = new MyLex(start);
+
+        lex.resetAndNext("a+b");
+
+        DebugUtils.eval(nonterms[0], lex);
     }
 }
