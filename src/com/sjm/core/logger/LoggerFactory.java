@@ -25,18 +25,20 @@ import java.util.concurrent.TimeUnit;
 
 import com.sjm.core.util.core.DateFormats;
 import com.sjm.core.util.core.IOUtil;
+import com.sjm.core.util.core.Lex;
 import com.sjm.core.util.core.Lists;
-import com.sjm.core.util.core.Maps;
 import com.sjm.core.util.core.MyStringBuilder;
 import com.sjm.core.util.core.Numbers;
 import com.sjm.core.util.core.Strings;
-import com.sjm.core.util.misc.Analyzer;
-import com.sjm.core.util.misc.CharFilter;
 import com.sjm.core.util.misc.Misc;
 import com.sjm.core.util.misc.Size;
-import com.sjm.core.util.misc.Source;
 
 public class LoggerFactory {
+    public static void main(String[] args) {
+        Logger logger = LoggerFactory.getLogger(LoggerFactory.class);
+        logger.error("123456", new Exception());
+    }
+
     static {
         try {
             loadLoggerProperties();
@@ -51,7 +53,7 @@ public class LoggerFactory {
         while (keys.hasMoreElements()) {
             String key = keys.nextElement();
             String value = System.getProperty(key);
-            if (Misc.isEmpty(value))
+            if (Strings.isEmpty(value))
                 System.setProperty(key, res.getString(key));
         }
     }
@@ -75,21 +77,21 @@ public class LoggerFactory {
             if (appenders != null) {
                 appenderSet.addAll(appenders);
             }
-            if (Misc.isEmpty(levelStr)) {
+            if (Strings.isEmpty(levelStr)) {
                 levelStr = Util.getProperty(sb, "level", null, String.class);
             }
-            if (Misc.isEmpty(pattern)) {
+            if (Strings.isEmpty(pattern)) {
                 pattern = Util.getProperty(sb, "pattern", null, String.class);
             }
         }
         appenderSet.addAll(LogAppenders.defaultAppenders);
         LogAppender[] appenderArr = (LogAppender[]) Lists.toArray(appenderSet, LogAppender.class);
         int level;
-        if (Misc.isEmpty(levelStr))
+        if (Strings.isEmpty(levelStr))
             level = Util.getDefaultLevel();
         else
             level = Util.getLevel(levelStr);
-        if (Misc.isEmpty(pattern))
+        if (Strings.isEmpty(pattern))
             pattern = Util.getDefaultPattern();
         return new Logger(clazz, level, LogFormatParser.parseOrGetCached(pattern), appenderArr);
     }
@@ -282,7 +284,7 @@ public class LoggerFactory {
             String key = arr[0];
             String defaultValue = arr.length > 1 ? arr[1] : null;
             return make(left, min, max,
-                    ctx -> ctx.sb.append(Maps.getOrDefault(ctx.attributes, key, defaultValue)));
+                    ctx -> ctx.sb.append(ctx.attributes.getOrDefault(key, defaultValue)));
         }
 
         public static LogPattern simple(String text) {
@@ -348,7 +350,7 @@ public class LoggerFactory {
             private ReplaceHandler[] handlers;
 
             public ClassNameFormatter(String exp) {
-                if (Misc.isNotEmpty(exp)) {
+                if (Strings.isNotEmpty(exp)) {
                     String[] arr = exp.split("\\.");
                     if (arr.length == 1) {
                         n = Integer.parseInt(arr[0]);
@@ -500,15 +502,10 @@ public class LoggerFactory {
         }
 
         @Override
-        protected Iterable<String> itemKeys() {
-            return makers.keySet();
-        }
-
-        @Override
         protected LogPattern item(String key, boolean left, int min, int max, String... args) {
             PatternMaker<LogPattern> maker = makers.get(key);
             if (maker == null)
-                throw new IllegalArgumentException();
+                throw new IllegalArgumentException(key);
             if (needTimeMakes.contains(maker))
                 currentLogFormat.get().needTime = true;
             if (needStackMakes.contains(maker))
@@ -548,11 +545,6 @@ public class LoggerFactory {
         }
 
         @Override
-        protected Iterable<String> itemKeys() {
-            return makers.keySet();
-        }
-
-        @Override
         protected FileNameFormat item(String key, boolean left, int min, int max, String... args) {
             PatternMaker<FileNameFormat> maker = makers.get(key);
             if (maker == null)
@@ -566,138 +558,132 @@ public class LoggerFactory {
 
         protected abstract P attr(String value);
 
-        protected abstract Iterable<String> itemKeys();
-
         protected abstract P item(String key, boolean left, int min, int max, String... args);
 
         static enum PatternKey {
-            EOF, TEXT, MESSAGE, PERCENT, VARIABLE
-        }
-
-        Analyzer<PatternKey> patternAnalyzer;
-        {
-            patternAnalyzer = new Analyzer<>();
-            patternAnalyzer.setEOF(PatternKey.EOF);
-
-            Analyzer.Model model = new Analyzer.Model();
-            model.addLine(0, '%', 1);
-            model.addLine(1, '-', 2);
-            model.addLine(1, null, 2);
-            model.addLine(1, null, 5);
-            model.addLine(2, CharFilter.DecimalNumber, 3);
-            model.addLine(2, '.', 4);
-            model.addLine(3, CharFilter.DecimalNumber, 3);
-            model.addLine(3, '.', 4);
-            model.addLine(3, null, 5);
-            model.addLine(4, CharFilter.DecimalNumber, 4);
-            model.addLine(4, null, 5);
-            for (String key : itemKeys()) {
-                model.addLine(5, key.charAt(0), key + "_1");
-                for (int i = 1; i < key.length(); i++) {
-                    model.addLine(key + "_" + i, key.charAt(i), key + "_" + (i + 1));
-                }
-                model.addLine(key + "_" + key.length(), null, 6);
-            }
-            model.addLine(6, '{', 7);
-            model.addLine(6, null, 8);
-            model.addLine(7, '}', 6);
-            model.addLine(7, CharFilter.Any, 7);
-            model.addAction(8, Analyzer.Action.finish(PatternKey.MESSAGE));
-            patternAnalyzer.setModel(model);
-
-            patternAnalyzer.setSymbol("%%", PatternKey.PERCENT);
-
-            patternAnalyzer.setPattern("\\$\\{[^\\}]*\\}", PatternKey.VARIABLE);
-
-            model = new Analyzer.Model();
-            model.addLine(0, CharFilter.Any, 1);
-            model.addLine(1, CharFilter.or(CharFilter.equal(-1), CharFilter.equal('%'),
-                    CharFilter.equal('$')), 2);
-            model.addLine(1, CharFilter.Any, 1);
-            model.addAction(2, Analyzer.Action.Back);
-            model.addAction(2, Analyzer.Action.finish(PatternKey.TEXT));
-            patternAnalyzer.setModel(model);
+            EOF, TEXT, VARIABLE, PERCENT, PERCENT_PERCENT, SUB, INTEGER, DOT, TYPE, PARAM
         }
 
         public List<P> parseList(String str) {
+            LoggerPatternLex lex = new LoggerPatternLex();
+            lex.resetAndNext(str);
             List<P> list = new ArrayList<>();
-            Source<PatternKey> src = patternAnalyzer.analyze(str);
             L0: while (true) {
-                PatternKey key = src.next();
-                switch (key) {
+                switch (lex.key) {
                     case TEXT:
-                        list.add(simple(src.getValue().toString()));
-                        break;
-                    case MESSAGE:
-                        list.add(parseItem(src.getValue()));
+                        list.add(simple(lex.getString()));
+                        lex.next();
                         break;
                     case EOF:
                         break L0;
                     case PERCENT:
-                        list.add(simple("%"));
+                        switch (lex.next()) {
+                            case PERCENT_PERCENT:
+                                list.add(simple("%"));
+                                lex.next();
+                                break;
+                            default:
+                                list.add(parseItem(lex));
+                                break;
+                        }
                         break;
                     case VARIABLE:
-                        CharSequence value = src.getValue();
-                        list.add(attr(value.subSequence(2, value.length() - 1).toString()));
+                        list.add(attr(lex.getVariableString()));
+                        lex.next();
                         break;
+                    default:
+                        throw lex.newError();
                 }
             }
             return list;
         }
 
-        static enum ItemKey {
-            EOF, PERCENT, SUB, INTEGER, DOT, TEXT, PARAM
-        }
-
-        static Analyzer<ItemKey> messageAnalyzer;
-        static {
-            messageAnalyzer = new Analyzer<>();
-            messageAnalyzer.setEOF(ItemKey.EOF);
-            messageAnalyzer.setText(ItemKey.TEXT);
-            messageAnalyzer.setSymbol("%", ItemKey.PERCENT);
-            messageAnalyzer.setSymbol("-", ItemKey.SUB);
-            messageAnalyzer.setPattern("[0-9]+", ItemKey.INTEGER);
-            messageAnalyzer.setSymbol(".", ItemKey.DOT);
-            messageAnalyzer.setPattern("\\{[^\\}]*\\}", ItemKey.PARAM);
-        }
-
-        private P parseItem(CharSequence str) {
-            Source<ItemKey> src = messageAnalyzer.analyze(str);
-            ItemKey key = src.next();
-            if (key == ItemKey.PERCENT) {
-                key = src.next();
-            } else
-                throw new IllegalArgumentException();
+        private P parseItem(LoggerPatternLex lex) {
             boolean left = false;
-            if (key == ItemKey.SUB) {
+            if (lex.key == PatternKey.SUB) {
                 left = true;
-                key = src.next();
+                lex.next();
             }
             int min = -1, max = -1;
-            if (key == ItemKey.INTEGER) {
-                min = Numbers.parseUnsignInt(src.getValue(), 10, -1, -1);
-                key = src.next();
+            if (lex.key == PatternKey.INTEGER) {
+                min = lex.getUnsignInt();
+                lex.next();
             }
-            if (key == ItemKey.DOT) {
-                key = src.next();
+            if (lex.key == PatternKey.DOT) {
+                lex.next();
             }
-            if (key == ItemKey.INTEGER) {
-                max = Numbers.parseUnsignInt(src.getValue(), 10, -1, -1);
-                key = src.next();
+            if (lex.key == PatternKey.INTEGER) {
+                max = lex.getUnsignInt();
+                lex.next();
             }
             String name;
-            if (key == ItemKey.TEXT) {
-                name = src.getValue().toString();
-                key = src.next();
+            if (lex.key == PatternKey.TYPE) {
+                name = lex.getString();
+                lex.next();
             } else
-                throw new IllegalArgumentException();
+                throw lex.newError();
             List<String> params = new ArrayList<>();
-            while (key == ItemKey.PARAM) {
-                CharSequence value = src.getValue();
-                params.add(value.subSequence(1, value.length() - 1).toString());
-                key = src.next();
+            while (lex.key == PatternKey.PARAM) {
+                params.add(lex.getParamString());
+                lex.next();
             }
             return item(name, left, min, max, (String[]) Lists.toArray(params, String.class));
+        }
+
+        static class LoggerPatternLex extends Lex.StringLex<PatternKey> {
+            private static final DFAState[] START = new LoggerPatternLexBuilder().build();
+
+            public LoggerPatternLex() {
+                super(START[0]);
+            }
+
+            static class LoggerPatternLexBuilder extends Lex.Builder<LoggerPatternLex> {
+                public DFAState[] build() {
+                    initNFA();
+
+                    defineActionTemplate("finish", (lex, a) -> lex.finish((PatternKey) a[0]));
+                    defineActionTemplate("rollback", (lex, a) -> lex.rollback());
+                    defineActionTemplate("switchStart", (lex, a) -> lex.start = START[(int) a[0]]);
+
+                    PatternKey[] keys = PatternKey.values();
+                    for (PatternKey key : keys)
+                        defineVariable(key.name(), key);
+
+                    definePattern("BBK", "[{][^(\\})]*[}]");
+
+                    addPattern("START_0", "[$]#{finish(EOF)}");
+                    addPattern("START_0", "[^(%$\\$)]+#{finish(TEXT)}");
+                    addPattern("START_0", "\\$${BBK}#{finish(VARIABLE)}");
+                    addPattern("START_0", "%#{switchStart(1)}#{finish(PERCENT)}");
+
+                    addPattern("START_1", "%#{switchStart(0)}#{finish(PERCENT_PERCENT)}");
+                    addPattern("START_1", "-#{finish(SUB)}");
+                    addPattern("START_1", "[0-9]+#{finish(INTEGER)}");
+                    addPattern("START_1", "[.]#{finish(DOT)}");
+                    addPattern("START_1", "[a-zA-Z_][a-zA-Z_0-9]*#{switchStart(2)}#{finish(TYPE)}");
+
+                    addPattern("START_2", "${BBK}#{finish(PARAM)}");
+                    addPattern("START_2", "[^{]#{switchStart(0)}#{rollback()}#{finish(null)}");
+
+                    return buildDFA("START_0", "START_1", "START_2");
+                }
+            }
+
+            public String getString() {
+                return str.substring(begin, index);
+            }
+
+            public String getVariableString() {
+                return str.substring(begin + 2, index - 1);
+            }
+
+            public int getUnsignInt() {
+                return Numbers.parseUnsignInt(str, 10, begin, index);
+            }
+
+            public String getParamString() {
+                return str.substring(begin + 1, index - 1);
+            }
         }
     }
 
@@ -1111,7 +1097,7 @@ public class LoggerFactory {
 
         private static boolean[] parseLevelSet(String levels) {
             boolean[] levelSet = new boolean[Logger.LEVEL_NONE + 1];
-            if (Misc.isEmpty(levels)) {
+            if (Strings.isEmpty(levels)) {
                 for (int i = Util.getDefaultLevel(); i < levelSet.length; i++) {
                     levelSet[i] = true;
                 }

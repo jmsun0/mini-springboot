@@ -13,6 +13,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sjm.core.util.core.Converter;
 import com.sjm.core.util.core.MyStringBuilder;
 import com.sjm.core.util.core.Strings;
 
@@ -140,5 +141,10 @@ public class Misc {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static <T> T getProperty(String key, T defaultValue, Class<T> clazz) {
+        String value = System.getProperty(key);
+        return Strings.isEmpty(value) ? defaultValue : Converter.INSTANCE.convert(value, clazz);
     }
 }

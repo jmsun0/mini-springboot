@@ -15,7 +15,6 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.Set;
@@ -26,8 +25,8 @@ import javax.annotation.Resource;
 
 import com.sjm.core.logger.Logger;
 import com.sjm.core.logger.LoggerFactory;
+import com.sjm.core.util.core.Converter;
 import com.sjm.core.util.misc.ClassScaner;
-import com.sjm.core.util.misc.Converters;
 
 public class SpringApplication {
     static final Logger logger = LoggerFactory.getLogger(SpringApplication.class);
@@ -52,12 +51,14 @@ public class SpringApplication {
     }
 
     protected Map<Object, Object> beanMap = new HashMap<>();
-    protected Set<BeanDefinition> beanList = new LinkedHashSet<>();
+    protected Set<BeanDefinition> beanSet = new LinkedHashSet<>();
     private List<String> packages = new ArrayList<>();
     private List<Object> targets = new ArrayList<>();
     private Map<Class<?>, List<Class<?>>> annotationClassesMap = new HashMap<>();
     private Map<Class<?>, ReflectionCacheData> reflectionCacheDataMap = new HashMap<>();
     private Predicate<Class<?>> scanFilter;
+    private Set<BeanDefinition> extraBeanSet = new LinkedHashSet<>();
+    private Set<BeanDefinition> initializingBeanSet = new LinkedHashSet<>();
 
     public SpringApplication(Object... sources) {
         for (Object source : sources)
@@ -66,7 +67,7 @@ public class SpringApplication {
 
     public void run(String... args) {
         try {
-            tryRun();
+            tryRun(args);
         } catch (SpringException e) {
             throw e;
         } catch (Exception e) {
@@ -85,9 +86,7 @@ public class SpringApplication {
             registerComponentBean(componentClass);
             if (AnnotationBeanRegister.class.isAssignableFrom(componentClass))
                 registerAnnotationBean(componentClass);
-            ReflectionCacheData data = getReflectionCacheData(componentClass);
-            for (int i = 0; i < data.beanMethods.size(); i++)
-                registerMethodBean(componentClass, data.beanMethods.get(i));
+            registerMethodBeans(componentClass);
         }
 
         assignDependsOn();
@@ -97,22 +96,24 @@ public class SpringApplication {
         appDef.type = SpringApplication.class;
         putBeanDefinition(appDef, false);
 
-        if (!targets.isEmpty()) {
-            Set<BeanDefinition> targetBeanSet = new LinkedHashSet<>();
+        if (targets.isEmpty()) {
+            for (BeanDefinition def : beanSet)
+                initBean(def);
+        } else {
             for (Object target : targets)
-                addTargetBean(getBeanDefinition(target), targetBeanSet);
-            beanList = targetBeanSet;
+                initBean(getBeanDefinition(target));
+            beanSet = new LinkedHashSet<>();
+            while (!extraBeanSet.isEmpty()) {
+                beanSet.addAll(extraBeanSet);
+                Set<BeanDefinition> extraBeanSetTmp = extraBeanSet;
+                extraBeanSet = new LinkedHashSet<>();
+                for (BeanDefinition def : extraBeanSetTmp)
+                    initBean(def);
+            }
             resetBeanMap();
         }
 
-        for (BeanDefinition def : beanList)
-            try {
-                initBean(def);
-            } catch (StackOverflowError e) {
-                throw new SpringException("Circular dependency:" + def.type);
-            }
-
-        for (BeanDefinition def : beanList) {
+        for (BeanDefinition def : beanSet) {
             List<AutowiredFieldInfo> lazyAutowiredFields =
                     getReflectionCacheData(def.bean.getClass()).lazyAutowiredFields;
             if (!lazyAutowiredFields.isEmpty())
@@ -120,7 +121,7 @@ public class SpringApplication {
                     fieldInfo.field.set(def.bean, getBean(fieldInfo.dep));
         }
 
-        for (BeanDefinition def : beanList)
+        for (BeanDefinition def : beanSet)
             if (def.bean instanceof CommandLineRunner)
                 ((CommandLineRunner) def.bean).run(args);
 
@@ -130,6 +131,8 @@ public class SpringApplication {
         targets = null;
         annotationClassesMap = null;
         reflectionCacheDataMap = null;
+        extraBeanSet = null;
+        initializingBeanSet = null;
     }
 
     public void addSource(Object source) {
@@ -176,50 +179,40 @@ public class SpringApplication {
         classes.add(clazz);
     }
 
-    private void addTargetBean(BeanDefinition def, Set<BeanDefinition> targetBeanSet) {
-        if (targetBeanSet.add(def)) {
-            if (def.dependsOn != null)
-                for (Object dep : def.dependsOn)
-                    addTargetBean(getBeanDefinition(dep), targetBeanSet);
-            if (def.factoryName != null)
-                addTargetBean(getBeanDefinition(def.factoryName), targetBeanSet);
-            if (def.type != null) {
-                List<AutowiredFieldInfo> lazyAutowiredFields =
-                        getReflectionCacheData(def.type).lazyAutowiredFields;
-                if (!lazyAutowiredFields.isEmpty())
-                    for (AutowiredFieldInfo fieldInfo : lazyAutowiredFields)
-                        addTargetBean(getBeanDefinition(fieldInfo.dep), targetBeanSet);
+    private void initBean(BeanDefinition def) throws Exception {
+        try {
+            initializingBeanSet.clear();
+            tryInitBean(def);
+        } catch (Throwable e) {
+            StringBuilder sb = new StringBuilder("Bean init fail\n");
+            for (BeanDefinition bd : initializingBeanSet) {
+                sb.append("-->").append(bd.type.getName()).append("\n");
             }
+            logger.error(sb.toString());
+            throw e;
         }
     }
 
-    private void initBean(BeanDefinition def) throws Exception {
-        try {
-            if (def.bean == null) {
-                if (def.dependsOn != null) {
-                    for (Object dep : def.dependsOn)
-                        initBean(getBeanDefinition(dep));
-                }
-                BeanDefinition factoryDef = getBeanDefinition(def.factoryName);
-                initBean(factoryDef);
-                if ((def.bean = ((FactoryBean<?>) factoryDef.bean).getObject()) == null)
-                    throw new SpringException("The factory of bean[" + def.type + "] return null");
-                beanPostProcess(def);
+    private void tryInitBean(BeanDefinition def) throws Exception {
+        if (def.bean == null) {
+            if (!initializingBeanSet.add(def))
+                throw new SpringException("Circular dependency");
+            if (def.dependsOn != null) {
+                for (Object dep : def.dependsOn)
+                    tryInitBean(getBeanDefinition(dep));
             }
-        } catch (Exception e) {
-            logger.error("Bean [{}] init fail", def.type);
-            throw e;
+            BeanDefinition factoryDef = getBeanDefinition(def.factoryName);
+            tryInitBean(factoryDef);
+            if ((def.bean = ((FactoryBean<?>) factoryDef.bean).getObject()) == null)
+                throw new SpringException("The factory of bean[" + def.type + "] return null");
+            beanPostProcess(def);
+            initializingBeanSet.remove(def);
         }
     }
 
     private void beanPostProcess(BeanDefinition def) throws Exception {
         Object bean = def.bean;
         ReflectionCacheData data = getReflectionCacheData(bean.getClass());
-
-        for (int i = 0; i < data.autowiredFields.size(); i++) {
-            AutowiredFieldInfo fieldInfo = data.autowiredFields.get(i);
-            fieldInfo.field.set(bean, getBean(fieldInfo.dep));
-        }
 
         for (int i = 0; i < data.valueFields.size(); i++) {
             Field field = data.valueFields.get(i);
@@ -236,18 +229,32 @@ public class SpringApplication {
             else
                 valueStr = System.getProperty(exp.substring(start + 1, colon),
                         exp.substring(colon + 1, end));
-            Object value = Converters.convert(valueStr, field.getType());
+            Object value = Converter.INSTANCE.convert(valueStr, field.getType());
             if (value != null)
                 field.set(bean, value);
         }
+
+        for (int i = 0; i < data.autowiredFields.size(); i++) {
+            AutowiredFieldInfo fieldInfo = data.autowiredFields.get(i);
+            BeanDefinition fieldDef = getBeanDefinition(fieldInfo.dep);
+            tryInitBean(fieldDef);
+            fieldInfo.field.set(bean, fieldDef.bean);
+        }
+
         for (AutowiredMethodInfo methodInfo : data.autowiredMethods)
             methodInfo.method.invoke(bean, getBeans(methodInfo.paramsDeps));
+
+        if (!targets.isEmpty()) {
+            extraBeanSet.add(def);
+            for (AutowiredFieldInfo fieldInfo : data.lazyAutowiredFields)
+                extraBeanSet.add(getBeanDefinition(fieldInfo.dep));
+        }
     }
 
     private static final Object[] Lazy_Assign_Depends_On = new Object[0];
 
     private void assignDependsOn() {
-        for (BeanDefinition def : beanList) {
+        for (BeanDefinition def : beanSet) {
             if (def.dependsOn != Lazy_Assign_Depends_On)
                 continue;
             ReflectionCacheData data = getReflectionCacheData(def.type);
@@ -275,7 +282,7 @@ public class SpringApplication {
                             depClasses.add(cls);
                     } catch (ClassNotFoundException ex) {
                         depValue += ".";
-                        for (BeanDefinition bd : beanList)
+                        for (BeanDefinition bd : beanSet)
                             if (bd.type.getName().startsWith(depValue))
                                 depClasses.add(bd.type);
                     }
@@ -324,6 +331,9 @@ public class SpringApplication {
         for (Class<?> beanClass : beanClasses) {
             Annotation ann = beanClass.getAnnotation(annType);
             AnnotationBeanDefinition annDef = register.register(ann, beanClass);
+
+            if (!beanClass.isInterface())
+                registerMethodBeans(beanClass);
 
             String factoryFactoryDefName = "AnnotationFactoryBean_" + beanClass.getName();
 
@@ -377,6 +387,12 @@ public class SpringApplication {
         putBeanDefinition(method.getName(), def);
     }
 
+    private void registerMethodBeans(Class<?> componentClass) {
+        ReflectionCacheData data = getReflectionCacheData(componentClass);
+        for (int i = 0; i < data.beanMethods.size(); i++)
+            registerMethodBean(componentClass, data.beanMethods.get(i));
+    }
+
     @SuppressWarnings("unchecked")
     public BeanDefinition getBeanDefinition(Object nameOrClass) {
         Object defOrList = beanMap.get(nameOrClass);
@@ -411,7 +427,7 @@ public class SpringApplication {
         Class<?> clazz = def.type;
         Set<Class<?>> superClasses = new HashSet<>();
         addClasses(superClasses, clazz);
-        beanList.add(def);
+        beanSet.add(def);
         for (Class<?> superClass : superClasses) {
             Object defOrList = beanMap.get(superClass);
             if (defOrList == null)
@@ -438,18 +454,19 @@ public class SpringApplication {
     }
 
     private void resetBeanMap() {
-        for (Iterator<Entry<Object, Object>> it = beanMap.entrySet().iterator(); it.hasNext();) {
+        for (Iterator<Map.Entry<Object, Object>> it = beanMap.entrySet().iterator(); it
+                .hasNext();) {
             Object defOrList = it.next().getValue();
             if (defOrList instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<BeanDefinition> list = (List<BeanDefinition>) defOrList;
                 for (int i = list.size() - 1; i >= 0; i--)
-                    if (!beanList.contains(list.get(i)))
+                    if (!beanSet.contains(list.get(i)))
                         list.remove(i);
                 if (list.isEmpty())
                     it.remove();
             } else {
-                if (!beanList.contains(defOrList))
+                if (!beanSet.contains(defOrList))
                     it.remove();
             }
         }

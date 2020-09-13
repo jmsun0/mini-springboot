@@ -51,7 +51,7 @@ public class Converter {
     /**
      * 获得一个缓存的任意类型转换器
      */
-    public Function<Object, Object> getConverter(Type type) {
+    public <T, R> Function<T, R> getConverter(Type type) {
         Function<?, ?> func = converters.get(type);
         if (func == null) {
             synchronized (this) {
@@ -62,24 +62,27 @@ public class Converter {
                 }
             }
         }
-        return (Function<Object, Object>) func;
+        return (Function<T, R>) func;
     }
 
     /**
      * 转换任意对象到指定类型
      */
-    public Object convert(Object data, Type type) {
+    public <T> T convert(Object data, Type type) {
         Function<Object, Object> func = getConverter(type);
         if (func == null)
             throw new IllegalArgumentException("unsupported type '" + type.getTypeName() + "'");
-        return func.apply(data);
+        return (T) func.apply(data);
     }
 
-    private Function<?, ?> getBaseConverter(Type type) {
+    /**
+     * 获得一个基本类型转换器
+     */
+    public <T, R> Function<T, R> getBaseConverter(Type type) {
         Function<?, ?> func = baseConverters.get(type);
         if (func == null && parent != null)
             func = parent.getBaseConverter(type);
-        return func;
+        return (Function<T, R>) func;
     }
 
     private Function<?, ?> doGetConverter(Type type) {

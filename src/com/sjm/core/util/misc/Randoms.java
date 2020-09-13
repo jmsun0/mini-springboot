@@ -2,6 +2,9 @@ package com.sjm.core.util.misc;
 
 import com.sjm.core.util.core.Strings;
 
+/**
+ * 单线程随机数类
+ */
 public class Randoms {
     private static final long multiplier = 0x5DEECE66DL;
     private static final long addend = 0xBL;

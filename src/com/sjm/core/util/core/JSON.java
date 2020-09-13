@@ -911,7 +911,6 @@ public class JSON {
             }
         }
 
-
         @Override
         public RuntimeException newError(String message) {
             return new JSONException(message);

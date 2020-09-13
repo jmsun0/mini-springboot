@@ -14,19 +14,23 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.IntFunction;
+import java.util.function.Supplier;
 
+import com.sjm.core.util.core.Converter;
 import com.sjm.core.util.core.IOUtil;
 import com.sjm.core.util.core.MyStringBuilder;
+import com.sjm.core.util.core.Reflection;
+import com.sjm.core.util.core.Reflection.Setter;
 import com.sjm.core.util.core.Strings;
 
 public class DBUtil {
     public static void main(String[] args) throws Exception {
-        // Connection conn = getMySQLConn("127.0.0.1", 3306, "test", null, "root", "root");
-        Connection conn = getMySQLConn("192.168.200.89", 3306, "hotdb_cloud_management_config",
+        Connection conn = getMySQLConn("192.168.210.141", 3306, "hotdb_cloud_management_config",
                 null, "hotdb_cloud", "hotdb_cloud@hotpu.cn");
         Shell.run(getShell(conn), System.in, System.out, System.err, null);
     }
@@ -103,21 +107,136 @@ public class DBUtil {
     }
 
     public static class RowMappers {
-        public static abstract class SimpleRowMapper<T> implements RowMapper<T, ResultSetMetaData> {
+        public static abstract class ResultSetMetaDataRowMapper<T>
+                implements RowMapper<T, ResultSetMetaData> {
             @Override
             public ResultSetMetaData prepareMetaData(ResultSet rs) throws SQLException {
                 return rs.getMetaData();
             }
         }
+        public static abstract class VoidRowMapper<T> implements RowMapper<T, Void> {
+            @Override
+            public Void prepareMetaData(ResultSet rs) throws SQLException {
+                return null;
+            }
+        }
 
-        public static <T> RowMapper<T[], ResultSetMetaData> toArray(IntFunction<T[]> allocator,
-                Function<Object, T> func) {
-            return new SimpleRowMapper<T[]>() {
+        public static <T> RowMapper<Object[], ?> toArray(Class<?>[] types) {
+            return new VoidRowMapper<Object[]>() {
                 @Override
-                public T[] mapRow(ResultSet rs, ResultSetMetaData meta, int rowNum)
+                public Object[] mapRow(ResultSet rs, Void meta, int rowNum) throws SQLException {
+                    Object[] arr = new Object[types.length];
+                    for (int i = 0; i < arr.length; i++) {
+                        arr[i] = rs.getObject(i + 1, types[i]);
+                    }
+                    return arr;
+                }
+            };
+        }
+
+        public static <T> RowMapper<Object[], ?> toArray() {
+            return new ResultSetMetaDataRowMapper<Object[]>() {
+                @Override
+                public Object[] mapRow(ResultSet rs, ResultSetMetaData meta, int rowNum)
                         throws SQLException {
-                    // TODO Auto-generated method stub
-                    return null;
+                    Object[] arr = new Object[meta.getColumnCount()];
+                    for (int i = 0; i < arr.length; i++) {
+                        arr[i] = rs.getObject(i + 1);
+                    }
+                    return arr;
+                }
+            };
+        }
+
+        public static <T> RowMapper<Map<String, Object>, ?> toMap(
+                Supplier<Map<String, Object>> supplier) {
+            return new ResultSetMetaDataRowMapper<Map<String, Object>>() {
+                @Override
+                public Map<String, Object> mapRow(ResultSet rs, ResultSetMetaData meta, int rowNum)
+                        throws SQLException {
+                    Map<String, Object> map = supplier.get();
+                    for (int i = 0, len = meta.getColumnCount(); i < len; i++) {
+                        map.put(meta.getColumnLabel(i + 1), rs.getObject(i + 1));
+                    }
+                    return map;
+                }
+            };
+        }
+
+        public static class ToObjectMetaData<T> {
+            public Function<Object, T> baseConverter;
+            public Supplier<T> supplier;
+            public ToObjectColumnMetaData<T>[] columns;
+
+            public ToObjectMetaData(Function<Object, T> baseConverter, Supplier<T> supplier,
+                    ToObjectColumnMetaData<T>[] columns) {
+                this.baseConverter = baseConverter;
+                this.supplier = supplier;
+                this.columns = columns;
+            }
+        }
+        public static class ToObjectColumnMetaData<T> {
+            public int index;
+            public Reflection.Setter setter;
+            public Function<Object, T> converter;
+
+            public ToObjectColumnMetaData(int index, Setter setter, Function<Object, T> converter) {
+                this.index = index;
+                this.setter = setter;
+                this.converter = converter;
+            }
+        }
+
+        public static <T> RowMapper<T, ?> toObject(Class<T> clazz) {
+            Map<String, Reflection.SetterInfo> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            map.putAll(Reflection.INSTANCE.getSettersMap(clazz));
+            Function<Object, T> baseConverter = Converter.INSTANCE.getBaseConverter(clazz);
+            Supplier<T> supplier = baseConverter != null ? null : () -> {
+                try {
+                    return clazz.newInstance();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            };
+            return new RowMapper<T, ToObjectMetaData<T>>() {
+                @SuppressWarnings("unchecked")
+                @Override
+                public ToObjectMetaData<T> prepareMetaData(ResultSet rs) throws SQLException {
+                    ToObjectColumnMetaData<T>[] columns = null;
+                    if (baseConverter == null) {
+                        ResultSetMetaData rsmd = rs.getMetaData();
+                        List<ToObjectColumnMetaData<T>> columnList = new ArrayList<>();
+                        for (int i = 0, len = rsmd.getColumnCount(); i < len; i++) {
+                            Reflection.SetterInfo setter = map.get(rsmd.getColumnLabel(i + 1));
+                            if (setter != null) {
+                                columnList.add(new ToObjectColumnMetaData<T>(i + 1, setter.setter,
+                                        Converter.INSTANCE.getConverter(setter.type)));
+                            }
+                        }
+                        columns = columnList.toArray(new ToObjectColumnMetaData[columnList.size()]);
+                    }
+                    return new ToObjectMetaData<T>(baseConverter, supplier, columns);
+                }
+
+                @Override
+                public T mapRow(ResultSet rs, ToObjectMetaData<T> meta, int rowNum)
+                        throws SQLException {
+                    try {
+                        if (meta.baseConverter != null) {
+                            return meta.baseConverter.apply(rs.getObject(1));
+                        } else {
+                            T obj = meta.supplier.get();
+                            for (ToObjectColumnMetaData<T> column : meta.columns) {
+                                column.setter.set(obj,
+                                        column.converter.apply(rs.getObject(column.index)));
+                            }
+                            return obj;
+                        }
+                    } catch (SQLException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new SQLException(e);
+                    }
                 }
             };
         }
@@ -194,6 +313,69 @@ public class DBUtil {
                     consumer.accept(rowMapper.mapRow(rs, meta, rowNum++));
             }
         }
+
+        public void print(PrintStream ps) throws SQLException {
+            try (ResultSet rs = this.rs) {
+                DBUtil.print(rs, ps);
+            }
+        }
+
+        public void print() throws SQLException {
+            print(System.out);
+        }
+    }
+
+    public static void print(ResultSet rs, PrintStream ps) throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        ResultSetMetaData rsmd = rs.getMetaData();
+        int col = rsmd.getColumnCount();
+        String[] cols = new String[col];
+        for (int i = 0; i < col; i++)
+            cols[i] = rsmd.getColumnName(i + 1);
+        list.add(cols);
+        while (rs.next()) {
+            String[] strs = new String[col];
+            for (int i = 0; i < col; i++) {
+                String str = rs.getString(i + 1);
+                if (str == null)
+                    str = "NULL";
+                strs[i] = str;
+            }
+            list.add(strs);
+        }
+        if (list.size() > 1) {
+            int[] lens = new int[list.get(0).length];
+            MyStringBuilder sb = new MyStringBuilder();
+            for (String[] arr : list) {
+                for (int i = 0; i < arr.length; i++) {
+                    lens[i] = Math.max(arr[i].length(), lens[i]);
+                }
+            }
+            printSeparator(sb, lens);
+            printLine(sb, list.get(0), lens);
+            printSeparator(sb, lens);
+            for (int i = 1; i < list.size(); i++)
+                printLine(sb, list.get(i), lens);
+            printSeparator(sb, lens);
+            sb.append((list.size() - 1) + " rows in set\n\n");
+            ps.print(sb.toString());
+        } else {
+            ps.print("Empty set\n\n");
+        }
+    }
+
+    private static void printSeparator(MyStringBuilder sb, int[] lens) {
+        for (int i = 0; i < lens.length; i++)
+            sb.append('+').append('-', lens[i] + 2);
+        sb.append('+').append('\n');
+    }
+
+    private static void printLine(MyStringBuilder sb, String[] cols, int[] lens) {
+        for (int i = 0; i < lens.length; i++) {
+            String col = cols[i];
+            sb.append('|').append(' ').append(col).append(' ', lens[i] - col.length() + 1);
+        }
+        sb.append('|').append('\n');
     }
 
     public static Shell getShell(final Connection conn) {
@@ -250,7 +432,7 @@ public class DBUtil {
                                 if (stmt.execute(sql)) {
                                     do {
                                         ResultSet rs = stmt.getResultSet();
-                                        new ResultCollector(rs).print(out);
+                                        print(rs, out);
                                     } while (stmt.getMoreResults());
                                 } else {
                                     int n = stmt.getUpdateCount();

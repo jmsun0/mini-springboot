@@ -1,5 +1,6 @@
 package com.sjm.core.util.core;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -88,6 +89,9 @@ public class BaseConverter {
                 }
             if (data instanceof Boolean)
                 return ((Boolean) data) ? 1L : 0L;
+            if (data instanceof Date)
+                return ((Date) data).getTime();
+
         }
         return null;
     }
@@ -201,35 +205,35 @@ public class BaseConverter {
         return null;
     }
 
-    public static int toint(Object data) {
+    public static Integer toint(Object data) {
         return nullToDefault(toInteger(data), ZERO_INTEGER);
     }
 
-    public static long tolong(Object data) {
+    public static Long tolong(Object data) {
         return nullToDefault(toLong(data), ZERO_LONG);
     }
 
-    public static short toshort(Object data) {
+    public static Short toshort(Object data) {
         return nullToDefault(toShort(data), ZERO_SHORT);
     }
 
-    public static byte tobyte(Object data) {
+    public static Byte tobyte(Object data) {
         return nullToDefault(toByte(data), ZERO_BYTE);
     }
 
-    public static char tochar(Object data) {
+    public static Character tochar(Object data) {
         return nullToDefault(toCharacter(data), ZERO_CHARACTER);
     }
 
-    public static boolean toboolean(Object data) {
+    public static Boolean toboolean(Object data) {
         return nullToDefault(toBoolean(data), ZERO_BOOLEAN);
     }
 
-    public static float tofloat(Object data) {
+    public static Float tofloat(Object data) {
         return nullToDefault(toFloat(data), ZERO_FLOAT);
     }
 
-    public static double todouble(Object data) {
+    public static Double todouble(Object data) {
         return nullToDefault(toDouble(data), ZERO_DOUBLE);
     }
 }
