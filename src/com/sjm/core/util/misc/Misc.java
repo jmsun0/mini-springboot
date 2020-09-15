@@ -10,8 +10,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sjm.core.util.core.Converter;
 import com.sjm.core.util.core.MyStringBuilder;
@@ -62,26 +60,6 @@ public class Misc {
 
     public static void showRecordTime() {
         System.out.println(System.currentTimeMillis() - time);
-    }
-
-    public static String[] getAllGroup(Pattern pattern, String str) {
-        Matcher mc = pattern.matcher(str);
-        if (mc.find()) {
-            int count = mc.groupCount();
-            String[] result = new String[count];
-            for (int i = 0; i < count; i++)
-                result[i] = mc.group(i + 1);
-            return result;
-        }
-        return null;
-    }
-
-    public static void close(AutoCloseable ac) {
-        if (ac != null)
-            try {
-                ac.close();
-            } catch (Exception e) {
-            }
     }
 
     public static InterruptedException sleep(long millis) {

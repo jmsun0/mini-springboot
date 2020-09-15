@@ -11,7 +11,7 @@ import java.util.List;
 
 import com.sjm.core.nio.core.ChannelContext;
 import com.sjm.core.nio.core.ChannelDecoder;
-import com.sjm.core.util.misc.Misc;
+import com.sjm.core.util.core.IOUtil;
 
 /**
  * 
@@ -47,7 +47,7 @@ public class ByteArrayWithFilesDecoder extends ChannelDecoder {
 
         @Override
         public void close() throws IOException {
-            Misc.close(fc);
+            IOUtil.close(fc);
             if (files != null)
                 for (File file : files)
                     file.delete();

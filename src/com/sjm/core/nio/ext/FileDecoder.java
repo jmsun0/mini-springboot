@@ -9,7 +9,7 @@ import java.nio.file.StandardOpenOption;
 
 import com.sjm.core.nio.core.ChannelContext;
 import com.sjm.core.nio.core.ChannelDecoder;
-import com.sjm.core.util.misc.Misc;
+import com.sjm.core.util.core.IOUtil;
 
 /**
  * 报文类型： File（实现零拷贝）
@@ -35,7 +35,7 @@ public class FileDecoder extends ChannelDecoder {
 
         @Override
         public void close() throws IOException {
-            Misc.close(fc);
+            IOUtil.close(fc);
             file.delete();
         }
     }

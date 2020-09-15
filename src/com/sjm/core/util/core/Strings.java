@@ -633,6 +633,11 @@ public class Strings {
         return 0;
     }
 
+    public static boolean endWith(CharSequence str, int end, CharSequence suffix) {
+        int suffixLen = suffix.length();
+        return end >= suffixLen && compare(str, end - suffixLen, end, suffix, 0, suffixLen) == 0;
+    }
+
     /**
      * 索引字符出现的位置，但是忽略转义符号
      */

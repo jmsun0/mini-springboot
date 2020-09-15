@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.sjm.core.util.misc.Misc;
+import com.sjm.core.util.core.IOUtil;
 
 public class ChannelContext implements Closeable {
     public SocketChannel channel;
@@ -54,14 +54,14 @@ public class ChannelContext implements Closeable {
 
     @Override
     public void close() throws IOException {
-        Misc.close(channel);
+        IOUtil.close(channel);
         bufferPool.recycle(readBuffer);
         bufferPool.recycle(writeBuffer);
         if (decodeCotext instanceof Closeable) {
-            Misc.close((Closeable) decodeCotext);
+            IOUtil.close((Closeable) decodeCotext);
         }
         if (decodeCotext instanceof Closeable) {
-            Misc.close((Closeable) decodeCotext);
+            IOUtil.close((Closeable) decodeCotext);
         }
     }
 

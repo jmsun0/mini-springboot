@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.hotdb.cloud.dao.RDSTodayDataChangeDao">
+
+	<sql id="group_by">
+		<if test="groupby instanceof String and !groupby.isEmpty()">group by `${groupby}`</if>
+		<if test="groupby instanceof java.util.List and !groupby.isEmpty()">group by <foreach collection="groupby" item="item" separator=",">`${item}`</foreach></if>
+	</sql>
+	
+	<sql id="order_offset">
+		<if test="order != null and order != ''">order by ${order}</if>
+		<if test="offset != null and pageSize != null and offset >= 0 and pageSize > 0">limit ${offset}, ${pageSize}</if>
+	</sql>
+	
+
+
+
+	<sql id="common_select_where">
+		<if test="rdsCode != null and rdsCode != ''">and c.`rds_code` = #{rdsCode}</if>
+		<if test="rdsId != null and rdsId > 0">and r.`id` = #{rdsId}</if>
+		<if test="gtRowsNow != null and gtRowsNow > 0">and c.`table_rows_now` > #{gtRowsNow}</if>
+		<if test="gtLengthNow != null and gtLengthNow > 0">and c.`data_length_now` > #{gtLengthNow}</if>
+		<if test="gtLengthIncRate != null and gtLengthIncRate > 0">and (c.`data_length_now`-c.`data_length_zero`)/c.`data_length_zero` > #{gtLengthIncRate}</if>
+	</sql>
+	
+	<select id="getDataChangeList" resultType="cn.hotdb.cloud.model.rds.RDSCapacity">
+		select
+		c.`rds_code` `rdsCode`,
+		c.`db_name` `db`,
+		c.`table_name` `table`,
+		c.`table_rows_now` - `table_rows_zero` `tableRows`,
+		c.`data_length_now` - `data_length_zero` `dataLength`
+		from `hotdb_rds_today_data_change` c
+		left join `hotdb_rds` r on r.`rds_code` = c.`rds_code`
+		<where>
+			<include refid="common_select_where"></include>
+		</where>
+		<include refid="order_offset"></include>
+	</select>
+	
+	<select id="getDataChangeCount" resultType="int">
+		select
+		count(1)
+		from `hotdb_rds_today_data_change` c
+		left join `hotdb_rds` r on r.`rds_code` = c.`rds_code`
+		<where>
+			<include refid="common_select_where"></include>
+		</where>
+	</select>
+	
+</mapper>

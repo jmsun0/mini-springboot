@@ -10,7 +10,7 @@ import java.util.Set;
 
 import com.sjm.core.logger.Logger;
 import com.sjm.core.logger.LoggerFactory;
-import com.sjm.core.util.misc.Misc;
+import com.sjm.core.util.core.IOUtil;
 
 public abstract class NIOBase implements PacketProcesser, Runnable {
     static final Logger logger = LoggerFactory.getLogger(NIOBase.class);
@@ -81,7 +81,7 @@ public abstract class NIOBase implements PacketProcesser, Runnable {
                         } catch (Exception e) {
                             logger.error(e.getMessage(), e);
                         }
-                        Misc.close(ctx);
+                        IOUtil.close(ctx);
                         if (shutdownOnClose())
                             shutdown();
                     }
@@ -108,7 +108,7 @@ public abstract class NIOBase implements PacketProcesser, Runnable {
 
     public void shutdown() {
         isOpen = false;
-        Misc.close(selector);
-        Misc.close(channel);
+        IOUtil.close(selector);
+        IOUtil.close(channel);
     }
 }
