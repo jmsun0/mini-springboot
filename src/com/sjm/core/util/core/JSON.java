@@ -35,6 +35,10 @@ import java.util.regex.Pattern;
  */
 @SuppressWarnings("unchecked")
 public class JSON {
+    public static void main(String[] args) {
+        System.out.println(JSON.parse("{\"id\":1234}"));
+    }
+
     public static String toJSONString(Object obj) {
         MyStringBuilder sb = new MyStringBuilder();
         Serializers.forAny.serialize(obj, sb);
@@ -914,10 +918,6 @@ public class JSON {
         @Override
         public RuntimeException newError(String message) {
             return new JSONException(message);
-        }
-
-        public Key getKey() {
-            return key;
         }
 
         private MyStringBuilder buffer = new MyStringBuilder();

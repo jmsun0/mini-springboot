@@ -974,12 +974,12 @@ public class Analyzer {
             while (!stack.isEmpty()) {
                 LL1Pattern peek = stack.peek();
                 if (peek.type == LL1PatternType.TERM) {
-                    if (lex.key != peek)
+                    if (lex.getKey() != peek)
                         throw lex.newError();
                     stack.pop();
                     lex.next();
                 } else {
-                    LL1Prod prod = peek.analyzeTable[lex.key.ordinal];
+                    LL1Prod prod = peek.analyzeTable[lex.getKey().ordinal];
                     if (prod == null)
                         throw lex.newError();
                     stack.pop();
@@ -1037,12 +1037,12 @@ public class Analyzer {
                 } else if (pattenrOrAction instanceof LL1Pattern) {
                     LL1Pattern peekPattern = (LL1Pattern) pattenrOrAction;
                     if (peekPattern.type == LL1PatternType.TERM) {
-                        if (lex.key != peekPattern)
+                        if (lex.getKey() != peekPattern)
                             throw lex.newError();
                         stack.pop();
                         lex.next();
                     } else if (peekPattern.type == LL1PatternType.NONTERM) {
-                        LL1Prod prod = peekPattern.analyzeTable[lex.key.ordinal];
+                        LL1Prod prod = peekPattern.analyzeTable[lex.getKey().ordinal];
                         if (prod == null)
                             throw lex.newError();
                         stack.pop();

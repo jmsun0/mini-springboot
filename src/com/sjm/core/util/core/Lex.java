@@ -1,5 +1,7 @@
 package com.sjm.core.util.core;
 
+import java.io.IOException;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,8 +19,8 @@ import java.util.function.Supplier;
 /**
  * 通用分词器
  */
-public abstract class Lex {
-    protected abstract int read();
+public interface Lex {
+    public int read();
 
     public interface Action<L extends Lex> {
         public void process(L lex);
@@ -592,12 +594,8 @@ public abstract class Lex {
             addTransferInternal(toId(from), condition, toId(to));
         }
 
-        public void addPattern(Object from, Pattern pattern) {
-            addPatternInternal(toId(from), pattern, stateIdGenerator.get());
-        }
-
-        public void bindAction(Object state, String name) {
-            bindActionInternal(toId(state), name);
+        public void addPattern(Object from, Pattern pattern, Object to) {
+            addPatternInternal(toId(from), pattern, to == null ? stateIdGenerator.get() : toId(to));
         }
 
         public NFAState[] buildNFA(Object... starts) {
@@ -628,12 +626,23 @@ public abstract class Lex {
             getRegexParser().parseAndAddPattern(name, regex);
         }
 
+        public void addPattern(Object from, String regex, Object to) {
+            addPattern(from, getRegexParser().parsePattern(regex), to);
+        }
+
         public void addPattern(Object from, String regex) {
-            addPattern(from, getRegexParser().parsePattern(regex));
+            addPattern(from, regex, null);
         }
 
         public void addTransfer(Object from, String conditionStr, Object to) {
             addTransfer(from, getRegexParser().parseCondition(conditionStr), to);
+        }
+
+        public void bindAction(Object state, String actionsStr) {
+            int id = toId(state);
+            for (String action : getRegexParser().parseActions(actionsStr)) {
+                bindActionInternal(id, action);
+            }
         }
 
         private RegexParser getRegexParser() {
@@ -1655,33 +1664,30 @@ public abstract class Lex {
         }
     }
 
-    public static class StringLex<K> extends Lex {
-        public State start;
-        public FARunner<? extends State> runner;
-        public String str;
-        public int index;
-        public int begin, end;
-        public boolean running;
-        public K key;
+    public static abstract class AbstractLex<K> implements Lex {
+        protected State start;
+        protected FARunner<? extends State> runner;
+        protected int index;
+        protected int begin;
+        protected int end;
+        protected boolean running;
+        protected K key;
 
-        public <S extends State> StringLex(S start, FARunner<S> runner) {
+        public <S extends State> AbstractLex(S start, FARunner<S> runner) {
             this.start = start;
             this.runner = runner;
         }
 
-        public StringLex(NFAState start) {
+        public AbstractLex(NFAState start) {
             this(start, NFARunner.getInstance());
         }
 
-        public StringLex(DFAState start) {
+        public AbstractLex(DFAState start) {
             this(start, DFARunner.getInstance());
         }
 
-        @Override
-        protected int read() {
-            int ch = index < str.length() ? str.charAt(index) : -1;
-            index++;
-            return ch;
+        public K getKey() {
+            return key;
         }
 
         @SuppressWarnings("unchecked")
@@ -1703,11 +1709,43 @@ public abstract class Lex {
             return new RuntimeException(message);
         }
 
+        protected abstract String getCurrentError();
+
         public RuntimeException newError() {
+            return newError(getCurrentError());
+        }
+
+        public void finish(K result) {
+            running = false;
+            key = result;
+            end = index;
+        }
+
+        public void rollback() {
+            index--;
+        }
+    }
+
+    public static class StringLex<K> extends AbstractLex<K> {
+        protected String str;
+
+        public StringLex(DFAState start) {
+            super(start);
+        }
+
+        @Override
+        public int read() {
+            int ch = index < str.length() ? str.charAt(index) : -1;
+            index++;
+            return ch;
+        }
+
+        @Override
+        protected String getCurrentError() {
             int i = Math.max(Math.min(index, str.length()), 0);
             String left = str.substring(Math.max(0, i - 10), i);
             String right = str.substring(i, Math.min(str.length(), i + 10));
-            return newError(left + "<<<<<<" + right);
+            return left + "<<<<<<" + right;
         }
 
         public void reset(String str) {
@@ -1719,15 +1757,77 @@ public abstract class Lex {
             reset(str);
             next();
         }
+    }
 
-        public void finish(K result) {
-            running = false;
-            key = result;
-            end = index;
+    public static class ReaderLex<K> extends AbstractLex<K> {
+        protected Reader reader;
+        protected char[] buffer = new char[50];
+        protected int bufferLen;
+        protected boolean eof;
+
+        public ReaderLex(DFAState start) {
+            super(start);
         }
 
-        public void rollback() {
-            index--;
+        @Override
+        public int read() {
+            if (index < bufferLen) {
+                return buffer[index++];
+            } else {
+                index++;
+                if (eof) {
+                    return -1;
+                } else {
+                    if (bufferLen + 1 >= buffer.length)
+                        buffer = Arrays.copyOf(buffer, buffer.length * 2);
+                    int result;
+                    try {
+                        result = reader.read();
+                    } catch (IOException e) {
+                        result = -1;
+                    }
+                    if (result == -1) {
+                        eof = true;
+                        return -1;
+                    } else {
+                        return buffer[bufferLen++] = (char) result;
+                    }
+                }
+            }
+        }
+
+        @Override
+        public K next() {
+            int newBufferLen = bufferLen - index;
+            if (newBufferLen > 0) {
+                System.arraycopy(buffer, index, buffer, 0, newBufferLen);
+                this.index = 0;
+                this.bufferLen = newBufferLen;
+            } else if (newBufferLen == 0) {
+                this.index = this.bufferLen = 0;
+            } else {
+                this.index = -newBufferLen;
+                this.bufferLen = 0;
+            }
+            return super.next();
+        }
+
+        @Override
+        protected String getCurrentError() {
+            return new StringBuilder().append(buffer, 0, index).append("<<<<<<")
+                    .append(buffer, index, bufferLen - index).toString();
+        }
+
+        public void reset(Reader reader) {
+            this.reader = reader;
+            this.index = 0;
+            this.bufferLen = 0;
+            this.eof = false;
+        }
+
+        public void resetAndNext(Reader reader) {
+            reset(reader);
+            next();
         }
     }
 
@@ -1749,7 +1849,7 @@ public abstract class Lex {
     }
 
     static class RegexLex extends StringLex<RegexKey> {
-        private static final NFAState[] START_GROUP = new RegexPatternBuildHelper().build();
+        private static final DFAState[] START_GROUP = new RegexPatternBuildHelper().build();
 
         public RegexLex() {
             super(START_GROUP[0]);
@@ -1783,17 +1883,17 @@ public abstract class Lex {
         }
 
         public int getInt() {
-            return Numbers.parseInt(str, 10, begin, end);
+            return Numbers.parseInt(str, 10, begin, index);
         }
 
         public String getString() {
-            return str.substring(begin, end);
+            return str.substring(begin, index);
         }
 
         private MyStringBuilder buffer = new MyStringBuilder();
 
         public String getUnescapeString() {
-            return buffer.clear().appendUnEscape(str, begin + 1, end - 1).toString();
+            return buffer.clear().appendUnEscape(str, begin + 1, index - 1).toString();
         }
     }
 
@@ -1812,8 +1912,8 @@ public abstract class Lex {
             patternMap.put(regex, pattern);
         }
 
-        protected void addPattern(Object from, String name, String... actions) {
-            addPattern(from, Patterns.action(get(name), actions));
+        protected void addPatternActions(Object from, String name, String... actions) {
+            addPattern(from, Patterns.action(get(name), actions), null);
         }
 
         protected void condition(String regex, Condition condition) {
@@ -1853,7 +1953,7 @@ public abstract class Lex {
     }
 
     static class RegexPatternBuildHelper extends PatternBuildHelper<RegexLex> {
-        public NFAState[] build() {
+        public DFAState[] build() {
             initNFA();
             // setAsciiMapOptimizeThreshold(-1);
 
@@ -1926,19 +2026,19 @@ public abstract class Lex {
             for (RegexKey key : new RegexKey[] {RegexKey.EOF, RegexKey.LSB, RegexKey.RSB,
                     RegexKey.ADD, RegexKey.OR, RegexKey.QUE, RegexKey.DOT, RegexKey.ASTERISK,
                     RegexKey.DOLLER, RegexKey.WELL, RegexKey.CHAR, RegexKey.LBB, RegexKey.LMB})
-                addPattern("START", key.name(), key.name());
+                addPatternActions("START", key.name(), key.name());
 
             for (RegexKey key : new RegexKey[] {RegexKey.COMMA, RegexKey.LSB, RegexKey.RSB,
                     RegexKey.NUM, RegexKey.STR, RegexKey.LITERAL, RegexKey.RBB})
-                addPattern("START_LBB", key.name(), key.name());
-            addPattern("START_LBB", "BLANK", "BLANK");
+                addPatternActions("START_LBB", key.name(), key.name());
+            addPatternActions("START_LBB", "BLANK", "BLANK");
 
             for (RegexKey key : new RegexKey[] {RegexKey.SUB, RegexKey.XOR, RegexKey.DOLLER,
                     RegexKey.RMB, RegexKey.LSB, RegexKey.RSB})
-                addPattern("START_LMB", key.name(), key.name());
-            addPattern("START_LMB", "CHAR_LMB", RegexKey.CHAR.name());
+                addPatternActions("START_LMB", key.name(), key.name());
+            addPatternActions("START_LMB", "CHAR_LMB", RegexKey.CHAR.name());
 
-            NFAState[] states = buildNFA("START", "START_LBB", "START_LMB");
+            DFAState[] states = buildDFA("START", "START_LBB", "START_LMB");
             return states;
         }
     }
@@ -2025,9 +2125,16 @@ public abstract class Lex {
         public Condition parseCondition(String conditionStr) {
             lex.resetAndNext(conditionStr);
             Condition condition = matchCondition(lex);
-            if (lex.key != RegexKey.EOF)
+            if (lex.getKey() != RegexKey.EOF)
                 throw lex.newError();
             return condition;
+        }
+
+        public List<String> parseActions(String actionsStr) {
+            lex.resetAndNext(actionsStr);
+            List<String> actions = new ArrayList<>();
+            matchActions(lex, actions);
+            return actions;
         }
 
         public void setVariable(String key, Object value) {
@@ -2037,7 +2144,7 @@ public abstract class Lex {
         private Pattern matchLinkPatterns(RegexLex lex, RegexKey stopKey) {
             List<Pattern> list = listPool.apply();
             try {
-                while (lex.key != stopKey)
+                while (lex.getKey() != stopKey)
                     list.add(matchOrPattern(lex));
                 return Patterns.link(list);
             } finally {
@@ -2050,7 +2157,7 @@ public abstract class Lex {
             try {
                 while (true) {
                     list.add(matchBasePattern(lex));
-                    if (lex.key != RegexKey.OR)
+                    if (lex.getKey() != RegexKey.OR)
                         break;
                     lex.next();
                 }
@@ -2068,7 +2175,7 @@ public abstract class Lex {
         }
 
         private void matchActions(RegexLex lex, List<String> actions) {
-            while (lex.key == RegexKey.WELL) {
+            while (lex.getKey() == RegexKey.WELL) {
                 if (lex.next() != RegexKey.LBB)
                     throw lex.newError();
                 if (lex.next() != RegexKey.STR)
@@ -2114,11 +2221,11 @@ public abstract class Lex {
 
         private Pattern matchBasePattern(RegexLex lex) {
             Pattern pattern;
-            if (lex.key == RegexKey.LSB) {
+            if (lex.getKey() == RegexKey.LSB) {
                 lex.next();
                 pattern = matchLinkPatterns(lex, RegexKey.RSB);
                 lex.next();
-            } else if (lex.key == RegexKey.DOLLER) {
+            } else if (lex.getKey() == RegexKey.DOLLER) {
                 if (lex.next() != RegexKey.LBB)
                     throw lex.newError();
                 if (lex.next() != RegexKey.STR)
@@ -2133,22 +2240,22 @@ public abstract class Lex {
             } else {
                 pattern = Patterns.condition(matchCondition(lex));
             }
-            switch (lex.key) {
+            switch (lex.getKey()) {
                 case LBB:
                     int min = -1, max = -1;
                     if (lex.next() == RegexKey.NUM) {
                         min = lex.getInt();
                         lex.next();
                     }
-                    if (lex.key == RegexKey.COMMA)
+                    if (lex.getKey() == RegexKey.COMMA)
                         lex.next();
                     else
                         max = min;
-                    if (lex.key == RegexKey.NUM) {
+                    if (lex.getKey() == RegexKey.NUM) {
                         max = lex.getInt();
                         lex.next();
                     }
-                    if (lex.key != RegexKey.RBB)
+                    if (lex.getKey() != RegexKey.RBB)
                         throw lex.newError();
                     lex.next();
                     pattern = Patterns.repeat(pattern, min, max);
@@ -2172,7 +2279,7 @@ public abstract class Lex {
         }
 
         private Condition matchCondition(RegexLex lex) {
-            switch (lex.key) {
+            switch (lex.getKey()) {
                 case CHAR:
                     char ch = lex.getChar();
                     lex.next();
@@ -2191,7 +2298,7 @@ public abstract class Lex {
         private Condition matchOrConditionInLMB(RegexLex lex, RegexKey stopKey) {
             List<Condition> list = listPool.apply();
             try {
-                while (lex.key != stopKey)
+                while (lex.getKey() != stopKey)
                     list.add(matchConditionInLMB(lex));
                 lex.next();
                 return list.size() == 1 ? list.get(0)
@@ -2202,11 +2309,11 @@ public abstract class Lex {
         }
 
         private Condition matchConditionInLMB(RegexLex lex) {
-            switch (lex.key) {
+            switch (lex.getKey()) {
                 case CHAR:
                     char left = lex.getChar();
                     lex.next();
-                    if (lex.key != RegexKey.SUB)
+                    if (lex.getKey() != RegexKey.SUB)
                         return conditionCache.eq(left);
                     if (lex.next() != RegexKey.CHAR)
                         throw lex.newError();

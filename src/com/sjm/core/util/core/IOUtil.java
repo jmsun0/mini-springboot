@@ -565,8 +565,15 @@ public class IOUtil {
         private byte[] data;
         private int size;
 
+        public ByteSequence() {}
+
         public ByteSequence(int cap) {
             data = new byte[cap];
+        }
+
+        public void set(byte[] data, int size) {
+            this.data = data;
+            this.size = size;
         }
 
         @Override

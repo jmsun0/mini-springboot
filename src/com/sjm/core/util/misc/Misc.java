@@ -16,19 +16,10 @@ import com.sjm.core.util.core.MyStringBuilder;
 import com.sjm.core.util.core.Strings;
 
 public class Misc {
-    public static final Comparator<Object> DEFAULT_COMPARATOR = new Comparator<Object>() {
-        @SuppressWarnings("unchecked")
-        @Override
-        public int compare(Object o1, Object o2) {
-            return ((Comparable<Object>) o1).compareTo(o2);
-        }
-    };
-    public static final Executor DEAULT_EXECUTOR = new Executor() {
-        @Override
-        public void execute(Runnable command) {
-            new Thread(command).start();
-        }
-    };
+    @SuppressWarnings("unchecked")
+    public static final Comparator<Object> DEFAULT_COMPARATOR =
+            (o1, o2) -> ((Comparable<Object>) o1).compareTo(o2);
+    public static final Executor DEAULT_EXECUTOR = command -> new Thread(command).start();
 
     public static class IntBox {
         public int value;

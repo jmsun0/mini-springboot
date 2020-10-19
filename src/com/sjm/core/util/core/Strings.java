@@ -36,6 +36,7 @@ public class Strings {
     public static final char[] BASE64_CHARS =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".toCharArray();
 
+    public static final boolean[] BLANK_MAP = getAsciiMap(BLANK);
     public static final boolean[] LETTER_MAP = getAsciiMap(LETTER);
     public static final boolean[] LETTER_UNDERLINE_MAP = getAsciiMap(LETTER_UNDERLINE);
     public static final boolean[] LETTER_NUMBER_UNDERLINE_MAP =
@@ -81,7 +82,7 @@ public class Strings {
     }
 
     public static boolean isBlank(char c) {
-        return BLANK.indexOf(c) != -1;
+        return c < 128 && BLANK_MAP[c];
     }
 
     public static boolean isNotBlank(char c) {
@@ -391,6 +392,15 @@ public class Strings {
         if (right == -1)
             right = str.length;
         return right;
+    }
+
+    public static boolean isBlank(CharSequence str, int begin, int end) {
+        begin = checkLeft(begin);
+        end = checkEnd(end, str);
+        for (; begin < end; begin++)
+            if (!Strings.isBlank(str.charAt(begin)))
+                return false;
+        return true;
     }
 
     public static String substring(CharSequence str, int begin, int end) {

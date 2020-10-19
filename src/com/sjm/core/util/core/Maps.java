@@ -140,4 +140,54 @@ public class Maps {
         sb.append('}');
         return sb.toString();
     }
+
+    public static class MyEntry<K, V> implements Map.Entry<K, V> {
+        public K key;
+        public V value;
+
+        public MyEntry(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        @Override
+        public K getKey() {
+            return key;
+        }
+
+        @Override
+        public V getValue() {
+            return value;
+        }
+
+        @Override
+        public V setValue(V value) {
+            V old = this.value;
+            this.value = value;
+            return old;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof Map.Entry) {
+                Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+                return eq(key, e.getKey()) && eq(value, e.getValue());
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return (key == null ? 0 : key.hashCode()) ^ (value == null ? 0 : value.hashCode());
+        }
+
+        @Override
+        public String toString() {
+            return key + "=" + value;
+        }
+
+        private static boolean eq(Object o1, Object o2) {
+            return o1 == null ? o2 == null : o1.equals(o2);
+        }
+    }
 }

@@ -126,7 +126,7 @@ public enum Size {
 
                 addPattern("START", "[\r\n\t\b\f ]+#{finish(null)}");
                 addPattern("START", "[$]#{finish(EOF)}");
-                addPattern("START", "[0-9]+(\\.[0-9]+)?#{finish(NUM)}");
+                addPattern("START", "[0-9]+([.][0-9]+)?#{finish(NUM)}");
                 addCaseInsensitivePatterns("B", "bytes", "byte", "b");
                 addCaseInsensitivePatterns("KB", "kb", "k");
                 addCaseInsensitivePatterns("MB", "mb", "m");
@@ -158,15 +158,15 @@ public enum Size {
         }
 
         public long parse() {
-            if (key != NUM)
+            if (getKey() != NUM)
                 throw newError();
             Number size = Numbers.parseDeclareNumber(str, begin, end);
             next();
-            if (!(key instanceof Size))
+            if (!(getKey() instanceof Size))
                 throw newError();
-            Size unit = (Size) key;
+            Size unit = (Size) getKey();
             next();
-            if (key != EOF)
+            if (getKey() != EOF)
                 throw newError();
             if (size instanceof Integer || size instanceof Long)
                 return unit.toB(size.longValue());

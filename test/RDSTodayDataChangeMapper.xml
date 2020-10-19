@@ -11,9 +11,6 @@
 		<if test="order != null and order != ''">order by ${order}</if>
 		<if test="offset != null and pageSize != null and offset >= 0 and pageSize > 0">limit ${offset}, ${pageSize}</if>
 	</sql>
-	
-
-
 
 	<sql id="common_select_where">
 		<if test="rdsCode != null and rdsCode != ''">and c.`rds_code` = #{rdsCode}</if>

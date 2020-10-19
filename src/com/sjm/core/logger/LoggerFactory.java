@@ -569,7 +569,7 @@ public class LoggerFactory {
             lex.resetAndNext(str);
             List<P> list = new ArrayList<>();
             L0: while (true) {
-                switch (lex.key) {
+                switch (lex.getKey()) {
                     case TEXT:
                         list.add(simple(lex.getString()));
                         lex.next();
@@ -600,30 +600,30 @@ public class LoggerFactory {
 
         private P parseItem(LoggerPatternLex lex) {
             boolean left = false;
-            if (lex.key == PatternKey.SUB) {
+            if (lex.getKey() == PatternKey.SUB) {
                 left = true;
                 lex.next();
             }
             int min = -1, max = -1;
-            if (lex.key == PatternKey.INTEGER) {
+            if (lex.getKey() == PatternKey.INTEGER) {
                 min = lex.getUnsignInt();
                 lex.next();
             }
-            if (lex.key == PatternKey.DOT) {
+            if (lex.getKey() == PatternKey.DOT) {
                 lex.next();
             }
-            if (lex.key == PatternKey.INTEGER) {
+            if (lex.getKey() == PatternKey.INTEGER) {
                 max = lex.getUnsignInt();
                 lex.next();
             }
             String name;
-            if (lex.key == PatternKey.TYPE) {
+            if (lex.getKey() == PatternKey.TYPE) {
                 name = lex.getString();
                 lex.next();
             } else
                 throw lex.newError();
             List<String> params = new ArrayList<>();
-            while (lex.key == PatternKey.PARAM) {
+            while (lex.getKey() == PatternKey.PARAM) {
                 params.add(lex.getParamString());
                 lex.next();
             }

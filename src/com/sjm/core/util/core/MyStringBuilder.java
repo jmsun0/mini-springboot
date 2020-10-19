@@ -421,6 +421,18 @@ public class MyStringBuilder implements CharSequence, Cloneable {
         return this;
     }
 
+    public MyStringBuilder appendUnicode(char ch) {
+        return append('\\').append('u').append(ch, Strings.LOWCASE_HEX_CHARS, 16, 4);
+    }
+
+    public MyStringBuilder appendUnicode(CharSequence str, int begin, int end) {
+        begin = Strings.checkLeft(begin);
+        end = Strings.checkEnd(end, str);
+        for (; begin < end; begin++)
+            appendUnicode(str.charAt(begin));
+        return this;
+    }
+
     public MyStringBuilder appendUpcase(CharSequence str, int begin, int end) {
         begin = Strings.checkLeft(begin);
         end = Strings.checkEnd(end, str);
@@ -429,27 +441,11 @@ public class MyStringBuilder implements CharSequence, Cloneable {
         return this;
     }
 
-    public MyStringBuilder appendUpcase(char[] str, int begin, int end) {
-        begin = Strings.checkLeft(begin);
-        end = Strings.checkEnd(end, str);
-        for (; begin < end; begin++)
-            append(Strings.toUpcase(str[begin]));
-        return this;
-    }
-
     public MyStringBuilder appendLowcase(CharSequence str, int begin, int end) {
         begin = Strings.checkLeft(begin);
         end = Strings.checkEnd(end, str);
         for (; begin < end; begin++)
             append(Strings.toLowcase(str.charAt(begin)));
-        return this;
-    }
-
-    public MyStringBuilder appendLowcase(char[] str, int begin, int end) {
-        begin = Strings.checkLeft(begin);
-        end = Strings.checkEnd(end, str);
-        for (; begin < end; begin++)
-            append(Strings.toLowcase(str[begin]));
         return this;
     }
 
